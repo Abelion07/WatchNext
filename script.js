@@ -1,32 +1,33 @@
-const scripts = [
-  "src/data/app-data.js",
-  "src/components/layout.js",
-  "src/components/cards.js",
-  "src/components/ai.js",
-  "src/components/roulette.js",
-  "src/pages/landing.js",
-  "src/pages/dashboard.js",
-  "src/pages/ai-page.js",
-  "src/pages/roulette.js",
-  "src/pages/analytics.js",
-  "src/pages/detail.js",
-  "src/app.js",
-];
+//components
+import Navbar from "./src/components/navbar.js";
+import Main from "/src/components/main.js";
 
-function loadScript(src) {
-  return new Promise((resolve, reject) => {
-    const script = document.createElement("script");
-    script.src = src;
-    script.onload = resolve;
-    script.onerror = () => reject(new Error(`Could not load ${src}`));
-    document.body.appendChild(script);
-  });
-}
+//data
+import { movies } from "./src/data/defaultmovies.js";
 
-async function loadApp() {
-  for (const script of scripts) {
-    await loadScript(script);
-  }
-}
+//features
+import { Navigation } from "./src/features/navigation.js";
+import { AImode } from "./src/features/ai.js";
+import { initSpinWheel } from "./src/features/spinwheel.js";
 
-loadApp();
+//pages
+import { Landing } from "./src/pages/landing.js";
+import { Dashboard } from "./src/pages/dashboard.js";
+import { AiRecs } from "./src/pages/AiRecs.js";
+import { Roulette } from "./src/pages/Roulette.js";
+import { Analytics } from "./src/pages/Analytics.js";
+import { FilmDetail } from "./src/pages/FilmDetail.js";
+
+
+const app = document.querySelector(".app");
+
+app.innerHTML = `
+  ${Navbar()}
+  ${Main(Landing(), Dashboard(), AiRecs(), Roulette(), Analytics(), FilmDetail())}
+`;
+
+Navigation();
+AImode();
+initSpinWheel();
+
+console.log(movies);
