@@ -4,6 +4,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "seed:continue-watching": "node scripts/seedContinueWatching.js",
+    "seed:continue-watching:sql": "node scripts/seedContinueWatching.js --sql",
     "start": "node server.js"
   },
   "keywords": [],
@@ -11,6 +13,9 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@supabase/supabase-js": "^2.58.0",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
     "axios": "^1.16.0"
   }
 }

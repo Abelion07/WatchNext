@@ -1,18 +1,45 @@
+import { rec_movies } from "../data/defaultmovies.js";
+import { renderMovieDetail } from "./FilmDetail.js";
+import { searchMovie } from "../services/tmdb.js";
+
 export function Dashboard() {
+  const aiPicks = rec_movies
+    .map((movie) => {
+      return `
+        <article class="rec-card" data-title="${movie.title}">
+          <div class="rec-art"></div>
+          <div class="card-info">
+            <div class="card-title-row">
+              <div class="card-title">${movie.title}</div>
+              <div class="movie-rating"></div>
+            </div>
+            <div class="card-meta">${movie.meta || "Loading details..."}</div>
+            <div class="ai-badge">✦ 97% match</div>
+            <div class="information-button">Info</div>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+
   return `<section id="dashboard" class="page active">
         <div class="dash-hero">
           <div>
             <div class="dash-kicker">Good evening, Ábel 👋</div>
             <div class="dash-title">What are we watching tonight?</div>
-            <div class="dash-sub">You have <span>12 titles in your watchlist</span> · AI picked 3 for tonight</div>
+            <div class="dash-sub" data-dashboard-summary>Loading your watchlist...</div>
           </div>
         </div>
 
-        <div class="section"><div class="section-head"><div class="section-title">Continue watching</div><div class="section-link">View all</div></div></div>
+        <div class="section">
+        <div class="section-head">
+        <div class="section-title">Start watching</div>
+            <div class="section-link" data-page="continue">View all</div>
+          </div>
+        </div>
+
         <div class="horizontal">
-          <article class="continue-card"><div class="thumb" style="background:linear-gradient(135deg,#020617,#4c1d95)">🔬<div class="progress"><div style="width:65%"></div></div></div><div class="card-info"><div class="card-title">Severance</div><div class="card-meta">S2 E5 · 65% done</div></div></article>
-          <article class="continue-card"><div class="thumb" style="background:linear-gradient(135deg,#1c0900,#78350f)">🎪<div class="progress"><div style="width:30%"></div></div></div><div class="card-info"><div class="card-title">The White Lotus</div><div class="card-meta">S3 E2 · 30% done</div></div></article>
-          <article class="continue-card"><div class="thumb" style="background:linear-gradient(135deg,#03120a,#064e3b)">🌿<div class="progress"><div style="width:88%"></div></div></div><div class="card-info"><div class="card-title">The Last of Us</div><div class="card-meta">S2 E6 · 88% done</div></div></article>
+          <div class="card-meta" data-dashboard-loading>Loading movies from database...</div>
         </div>
 
         <div class="stats">
@@ -24,10 +51,141 @@ export function Dashboard() {
 
         <div class="section"><div class="section-head"><div class="section-title">✨ AI picks for tonight</div><div class="section-link" data-page="ai">Ask AI →</div></div></div>
         <div class="horizontal">
-          <article class="rec-card"><div class="rec-art" style="background:linear-gradient(135deg,#090026,#4c1d95)">🌌</div><div class="card-info"><div class="card-title">Arrival</div><div class="card-meta">2016 · Sci-fi · 1h 56m</div><div class="ai-badge">✦ 97% match</div></div></article>
-          <article class="rec-card"><div class="rec-art" style="background:linear-gradient(135deg,#1c0900,#7c2d12)">🔥</div><div class="card-info"><div class="card-title">Prisoners</div><div class="card-meta">2013 · Thriller · 2h 33m</div><div class="ai-badge">✦ 91% match</div></div></article>
-          <article class="rec-card"><div class="rec-art" style="background:linear-gradient(135deg,#00111f,#075985)">🌊</div><div class="card-info"><div class="card-title">Annihilation</div><div class="card-meta">2018 · Sci-fi · 1h 55m</div><div class="ai-badge">✦ 89% match</div></div></article>
-          <article class="rec-card"><div class="rec-art" style="background:linear-gradient(135deg,#0a0a0a,#312e81)">🛸</div><div class="card-info"><div class="card-title">Ex Machina</div><div class="card-meta">2014 · Sci-fi · 1h 48m</div><div class="ai-badge">✦ 88% match</div></div></article>
+          ${aiPicks}
         </div>
       </section>`;
+}
+
+export function loadDashboardMovies() {
+  const posterlink = "https://image.tmdb.org/t/p/w500";
+
+  document.addEventListener("click", async (event) => {
+    const infoButton = event.target.closest(".information-button");
+    if (!infoButton) return;
+
+    const card = infoButton.closest("[data-title]");
+    const title = card?.dataset.title;
+    if (!title) return;
+
+    try {
+      infoButton.textContent = "Loading...";
+      const movie = await searchMovie(title);
+      renderMovieDetail(movie);
+
+      document.querySelectorAll(".page").forEach((page) => {
+        page.classList.toggle("active", page.id === "detail");
+      });
+      document.querySelectorAll(".nav-link").forEach((link) => {
+        link.classList.toggle("active", link.dataset.page === "detail");
+      });
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } finally {
+      infoButton.textContent = "Info";
+    }
+  });
+
+  renderDashboardFromDatabase(posterlink);
+  loadAiPickPosters(posterlink);
+}
+
+async function renderDashboardFromDatabase(posterlink) {
+  const dashboard = document.querySelector("#dashboard");
+  const movieRow = dashboard?.querySelector(".horizontal");
+  const summary = dashboard?.querySelector("[data-dashboard-summary]");
+
+  if (!dashboard || !movieRow || !summary) return;
+
+  try {
+    const response = await fetch(getApiUrl("/api/movies"));
+    const contentType = response.headers.get("content-type") || "";
+
+    if (!contentType.includes("application/json")) {
+      throw new Error("The movies API returned HTML instead of JSON. Start the backend with npm start and open http://localhost:3001.");
+    }
+
+    const result = await response.json();
+
+    if (!response.ok || !result.ok) {
+      throw new Error(result.error || "Could not load movies.");
+    }
+
+    const movies = result.movies || [];
+    const inProgressMovies = movies.filter(
+      (movie) => movie.status?.toLowerCase() === "released"
+    );
+
+    summary.innerHTML = `You have <span>${movies.length} titles in your watchlist</span> · AI picked ${rec_movies.length} for tonight`;
+    movieRow.innerHTML =
+      inProgressMovies.map(renderContinueCard).join("") ||
+      `<div class="card-meta">No movies found in the database.</div>`;
+  } catch (error) {
+    summary.textContent = "Could not load movies from database.";
+    movieRow.innerHTML = `<div class="card-meta">${error.message}</div>`;
+  }
+
+  function renderContinueCard(movie) {
+    return `
+      <article class="continue-card" data-title="${movie.title}">
+        <div class="thumb" style="background-image:url(${posterlink + movie.poster_path})"></div>
+        <div class="card-info">
+          <div class="card-title-row">
+            <div class="card-title">${movie.title}</div>
+            <div class="movie-rating">⭐ ${Number(movie.vote_average || 0).toFixed(1)}</div>
+          </div>
+          <div class="card-meta">${formatMovieMeta(movie)}</div>
+          <div class="information-button">Info</div>
+        </div>
+      </article>
+    `;
+  }
+
+}
+
+function loadAiPickPosters(posterlink) {
+  document.querySelectorAll(".rec-card").forEach(async (card) => {
+    const title = card.dataset.title;
+    const movie = await searchMovie(title);
+    if (!movie) return;
+
+    const cardTitle = card.querySelector(".card-title");
+    cardTitle.textContent = movie.title;
+
+    const thumb = card.querySelector(".rec-art");
+    thumb.style.backgroundImage = `url(${posterlink + movie.poster_path})`;
+
+    const meta = card.querySelector(".card-meta");
+    const rating = card.querySelector(".movie-rating");
+    meta.innerHTML = formatTmdbMovieMeta(movie);
+    rating.innerHTML = `⭐ ${movie.vote_average.toFixed(1)}`;
+  });
+}
+
+function getApiUrl(path) {
+  const isBackendOrigin =
+    window.location.hostname === "localhost" && window.location.port === "3001";
+
+  if (isBackendOrigin) {
+    return path;
+  }
+
+  return `http://localhost:3001${path}`;
+}
+
+function formatMovieMeta(movie) {
+  const year = movie.release_date?.split("-")[0] || "Unknown";
+  const genre = movie.genres?.split(",")[0] || "Movie";
+  const runtime = Number(movie.runtime || 0);
+  const hours = Math.floor(runtime / 60);
+  const minutes = runtime % 60;
+
+  return `${year} · ${genre === "Science Fiction" ? "Sci-Fi" : genre} · ${hours} h ${minutes} min`;
+}
+
+function formatTmdbMovieMeta(movie) {
+  const year = movie.release_date?.split("-")[0] || "Unknown";
+  const genre = movie.genres?.[0]?.name || "Movie";
+  const hours = Math.floor(movie.runtime / 60);
+  const minutes = movie.runtime % 60;
+
+  return `${year} · ${genre === "Science Fiction" ? "Sci-Fi" : genre} · ${hours} h ${minutes} min`;
 }

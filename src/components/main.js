@@ -1,8 +1,9 @@
-export default function Main(Landing, Dashboard, AiRecs, Roulette, Analytics, FilmDetail) {
+export default function Main(Landing, Dashboard, ContinueWatching, AiRecs, Roulette, Analytics, FilmDetail) {
   return `
         <main>
       ${Landing}
       ${Dashboard}
+      ${ContinueWatching}
       ${AiRecs}
       ${Roulette}
       ${Analytics}

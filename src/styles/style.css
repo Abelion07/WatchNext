@@ -405,6 +405,31 @@ button {
   font-weight: 700;
   cursor: pointer;
 }
+.section-link:hover {
+  color: var(--text1);
+}
+
+.library-header {
+  padding-bottom: 0;
+}
+
+.library-subtitle {
+  color: var(--text2);
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.movie-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+  padding: 18px 22px 28px;
+}
+
+.movie-grid .continue-card {
+  flex: initial;
+  min-width: 0;
+}
 
 /* Dashboard */
 .dash-hero {
@@ -471,7 +496,7 @@ button {
 }
 
 .continue-card {
-  flex: 0 0 230px;
+  flex: 0 0 200px;
   border-radius: 18px;
   overflow: hidden;
   transition: 0.18s ease;
@@ -483,8 +508,11 @@ button {
   border-color: rgba(168, 85, 247, 0.35);
 }
 .thumb {
-  height: 128px;
+  height: 230px;
   display: grid;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 100%;
   place-items: center;
   font-size: 42px;
   position: relative;
@@ -503,15 +531,52 @@ button {
 }
 .card-info {
   padding: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 .card-title {
   font-size: 14px;
   font-weight: 800;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .card-meta {
   color: var(--text2);
   font-size: 12px;
   margin-top: 4px;
+  /* text-align: center; */
+}
+.information-button {
+  margin-top: 6px;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, var(--purple), #5b21b6);
+  color: white;
+  border: 0;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  cursor: pointer;
+  transition: 0.18s ease;
+  display: block;
+}
+.information-button:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+}
+.information-button:active {
+  transform: translateY(2px);
+  filter: brightness(1.1);
+  transform: scale(0.95);
 }
 
 .stats {
@@ -538,17 +603,19 @@ button {
 }
 
 .rec-card {
-  flex: 0 0 150px;
+  flex: 0 0 200px;
   border-radius: 18px;
   overflow: hidden;
   transition: 0.18s ease;
 }
 
 .rec-art {
-  height: 205px;
+  height: 230px;
   display: grid;
   place-items: center;
-  font-size: 52px;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 100%;
 }
 .ai-badge {
   display: inline-flex;
@@ -968,6 +1035,8 @@ button {
     ),
     linear-gradient(135deg, #050512, #1b0732 55%, #12040a);
   border-bottom: 1px solid var(--border);
+  background-position: center;
+  background-size: cover;
 }
 .detail-meta {
   display: flex;
@@ -979,6 +1048,9 @@ button {
   height: 190px;
   border-radius: 20px;
   background: linear-gradient(135deg, #0c1028, #3b0f5c);
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
   display: grid;
   place-items: center;
   font-size: 66px;
@@ -993,6 +1065,17 @@ button {
 .detail-info p {
   color: var(--text2);
   margin-top: 8px;
+}
+.detail-rating {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 4px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.14);
+  color: #fbbf24;
+  font-size: 14px;
+  font-weight: 800;
 }
 .detail-body {
   padding: 24px 22px 42px;
@@ -1017,6 +1100,35 @@ button {
   color: var(--text2);
   line-height: 1.8;
   font-size: 14px;
+}
+.detail-list {
+  display: grid;
+  gap: 10px;
+}
+.detail-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.detail-row:last-child {
+  border-bottom: 0;
+}
+.detail-row strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text1);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.detail-row span {
+  color: var(--text2);
+  font-size: 12px;
+  text-align: right;
+  white-space: nowrap;
 }
 .detail-actions {
   display: flex;
@@ -1071,6 +1183,26 @@ textarea {
 textarea:focus {
   border-color: rgba(168, 85, 247, 0.45);
 }
+
+.movie-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.14);
+  color: #fbbf24;
+  font-weight: 800;
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.movie-rating:empty {
+  display: none;
+}
+
 
 @media (max-width: 860px) {
   .nav {
