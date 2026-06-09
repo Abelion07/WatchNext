@@ -7,7 +7,10 @@ export function ContinueWatching() {
             <div class="section-title">Continue watching</div>
             <div class="library-subtitle" data-continue-summary>Loading titles...</div>
           </div>
-          <div class="section-link" data-page="dashboard">Back to dashboard</div>
+          <div class="section-actions">
+            <button class="btn-small primary" type="button" data-open-add-movie>+ Film hozzáadása</button>
+            <div class="section-link" data-page="dashboard">Back to dashboard</div>
+          </div>
         </div>
       </div>
 
@@ -21,6 +24,13 @@ export function ContinueWatching() {
 export async function loadContinueWatching() {
   const posterlink = "https://image.tmdb.org/t/p/w500";
 
+  if (!loadContinueWatching.changeListenerAttached) {
+    document.addEventListener("movies:changed", () => {
+      loadContinueWatching();
+    });
+    loadContinueWatching.changeListenerAttached = true;
+  }
+
   const section = document.querySelector("#continue");
   const grid = section?.querySelector("[data-continue-grid]");
   const summary = section?.querySelector("[data-continue-summary]");
@@ -28,7 +38,7 @@ export async function loadContinueWatching() {
   if (!section || !grid || !summary) return;
 
   try {
-    const response = await fetch(getApiUrl("/api/movies"));
+    const response = await fetch(getApiUrl("/api/getmovies"));
     const result = await response.json();
 
     if (!response.ok || !result.ok) {
@@ -38,14 +48,14 @@ export async function loadContinueWatching() {
     const movies = result.movies || [];
 
     const inProgressMovies = movies.filter((movie) => {
-      return movie.status?.toLowerCase() === "released";
+      return movie.title;
     });
 
-    summary.textContent = `${inProgressMovies.length} titles in progress`;
+    summary.textContent = `${inProgressMovies.length} titles in your list`;
 
     grid.innerHTML =
       inProgressMovies.map((movie) => renderContinueCard(movie)).join("") ||
-      `<div class="card-meta">No in-progress movies found.</div>`;
+      `<div class="card-meta">No movies found in your list.</div>`;
   } catch (error) {
     summary.textContent = "Could not load titles.";
     grid.innerHTML = `<div class="card-meta">${error.message}</div>`;

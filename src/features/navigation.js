@@ -18,7 +18,7 @@ export function Navigation (){
       const suggestion = event.target.closest('.suggestion');
       if (suggestion) {
         document.querySelector('#aiInput').value = suggestion.textContent.trim();
-        sendAiMessage();
+        window.sendAiMessage?.();
       }
     });
 }

@@ -34,11 +34,14 @@ export function Dashboard() {
         <div class="section">
         <div class="section-head">
         <div class="section-title">Start watching</div>
-            <div class="section-link" data-page="continue">View all</div>
+            <div class="section-actions">
+              <button class="btn-small primary" type="button" data-open-add-movie>+ Film hozzáadása</button>
+              <div class="section-link" data-page="continue">View all</div>
+            </div>
           </div>
         </div>
 
-        <div class="horizontal">
+        <div class="horizontal" data-dashboard-watchlist>
           <div class="card-meta" data-dashboard-loading>Loading movies from database...</div>
         </div>
 
@@ -53,36 +56,56 @@ export function Dashboard() {
         <div class="horizontal">
           ${aiPicks}
         </div>
+
+        <div class="section">
+          <div class="section-head">
+            <div>
+              <div class="section-title">Megnézett filmek</div>
+              <div class="library-subtitle" data-dashboard-watched-summary>Loading watched movies...</div>
+            </div>
+          </div>
+        </div>
+        <div class="horizontal" data-dashboard-watched>
+          <div class="card-meta">Loading watched movies...</div>
+        </div>
       </section>`;
 }
 
 export function loadDashboardMovies() {
   const posterlink = "https://image.tmdb.org/t/p/w500";
 
-  document.addEventListener("click", async (event) => {
-    const infoButton = event.target.closest(".information-button");
-    if (!infoButton) return;
+  if (!loadDashboardMovies.infoListenerAttached) {
+    document.addEventListener("click", async (event) => {
+      const infoButton = event.target.closest(".information-button");
+      if (!infoButton) return;
 
-    const card = infoButton.closest("[data-title]");
-    const title = card?.dataset.title;
-    if (!title) return;
+      const card = infoButton.closest("[data-title]");
+      const title = card?.dataset.title;
+      if (!title) return;
 
-    try {
-      infoButton.textContent = "Loading...";
-      const movie = await searchMovie(title);
-      renderMovieDetail(movie);
+      try {
+        infoButton.textContent = "Loading...";
+        const movie = await searchMovie(title);
+        renderMovieDetail(movie);
 
-      document.querySelectorAll(".page").forEach((page) => {
-        page.classList.toggle("active", page.id === "detail");
-      });
-      document.querySelectorAll(".nav-link").forEach((link) => {
-        link.classList.toggle("active", link.dataset.page === "detail");
-      });
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    } finally {
-      infoButton.textContent = "Info";
-    }
-  });
+        document.querySelectorAll(".page").forEach((page) => {
+          page.classList.toggle("active", page.id === "detail");
+        });
+        document.querySelectorAll(".nav-link").forEach((link) => {
+          link.classList.toggle("active", link.dataset.page === "detail");
+        });
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } finally {
+        infoButton.textContent = "Info";
+      }
+    });
+
+    document.addEventListener("movies:changed", () => {
+      renderDashboardFromDatabase(posterlink);
+    });
+
+    loadDashboardMovies.infoListenerAttached = true;
+  }
 
   renderDashboardFromDatabase(posterlink);
   loadAiPickPosters(posterlink);
@@ -90,37 +113,55 @@ export function loadDashboardMovies() {
 
 async function renderDashboardFromDatabase(posterlink) {
   const dashboard = document.querySelector("#dashboard");
-  const movieRow = dashboard?.querySelector(".horizontal");
+  const movieRow = dashboard?.querySelector("[data-dashboard-watchlist]");
+  const watchedRow = dashboard?.querySelector("[data-dashboard-watched]");
   const summary = dashboard?.querySelector("[data-dashboard-summary]");
+  const watchedSummary = dashboard?.querySelector("[data-dashboard-watched-summary]");
 
-  if (!dashboard || !movieRow || !summary) return;
+  if (!dashboard || !movieRow || !watchedRow || !summary || !watchedSummary) return;
 
   try {
-    const response = await fetch(getApiUrl("/api/movies"));
-    const contentType = response.headers.get("content-type") || "";
+    const [watchlistResponse, watchedResponse] = await Promise.all([
+      fetch(getApiUrl("/api/getmovies")),
+      fetch(getApiUrl("/api/watched")),
+    ]);
+    const watchlistContentType = watchlistResponse.headers.get("content-type") || "";
+    const watchedContentType = watchedResponse.headers.get("content-type") || "";
 
-    if (!contentType.includes("application/json")) {
+    if (!watchlistContentType.includes("application/json") || !watchedContentType.includes("application/json")) {
       throw new Error("The movies API returned HTML instead of JSON. Start the backend with npm start and open http://localhost:3001.");
     }
 
-    const result = await response.json();
+    const [watchlistResult, watchedResult] = await Promise.all([
+      watchlistResponse.json(),
+      watchedResponse.json(),
+    ]);
 
-    if (!response.ok || !result.ok) {
-      throw new Error(result.error || "Could not load movies.");
+    if (!watchlistResponse.ok || !watchlistResult.ok) {
+      throw new Error(watchlistResult.error || "Could not load movies.");
+    }
+    if (!watchedResponse.ok || !watchedResult.ok) {
+      throw new Error(watchedResult.error || "Could not load watched movies.");
     }
 
-    const movies = result.movies || [];
-    const inProgressMovies = movies.filter(
-      (movie) => movie.status?.toLowerCase() === "released"
-    );
+    const movies = watchlistResult.movies || [];
+    const watchedMovies = watchedResult.movies || [];
+    const watchlistMovies = movies.filter((movie) => movie.title);
+    const visibleWatchedMovies = groupWatchedMovies(watchedMovies.filter((movie) => movie.title));
 
     summary.innerHTML = `You have <span>${movies.length} titles in your watchlist</span> · AI picked ${rec_movies.length} for tonight`;
     movieRow.innerHTML =
-      inProgressMovies.map(renderContinueCard).join("") ||
-      `<div class="card-meta">No movies found in the database.</div>`;
+      watchlistMovies.map(renderContinueCard).join("") ||
+      `<div class="card-meta">No movies found in your watchlist.</div>`;
+    watchedSummary.textContent = `${visibleWatchedMovies.length} watched titles · ${watchedMovies.length} total watches`;
+    watchedRow.innerHTML =
+      visibleWatchedMovies.map(renderWatchedCard).join("") ||
+      `<div class="card-meta">No watched movies yet.</div>`;
   } catch (error) {
     summary.textContent = "Could not load movies from database.";
     movieRow.innerHTML = `<div class="card-meta">${error.message}</div>`;
+    watchedSummary.textContent = "Could not load watched movies.";
+    watchedRow.innerHTML = `<div class="card-meta">${error.message}</div>`;
   }
 
   function renderContinueCard(movie) {
@@ -139,6 +180,63 @@ async function renderDashboardFromDatabase(posterlink) {
     `;
   }
 
+  function renderWatchedCard(movie) {
+    const watchedDate = movie.watched_at
+      ? new Intl.DateTimeFormat("hu-HU", {
+          month: "short",
+          day: "numeric",
+        }).format(new Date(movie.watched_at))
+      : "Watched";
+
+    const watchCountLabel =
+      Number(movie.watch_count || 0) > 1
+        ? `${movie.watch_count} megtekintés`
+        : "1 megtekintés";
+
+    return `
+      <article class="continue-card watched-card" data-title="${movie.title}">
+        <div class="thumb" style="background-image:url(${posterlink + movie.poster_path})"></div>
+        <div class="card-info">
+          <div class="card-title-row">
+            <div class="card-title">${movie.title}</div>
+            <div class="movie-rating">${Number(movie.user_vote || 0).toFixed(1)}</div>
+          </div>
+          <div class="card-meta">${watchCountLabel} · ${watchedDate} · ${formatMovieMeta(movie)}</div>
+          ${movie.watch_notes ? `<div class="watched-note">${escapeHtml(movie.watch_notes)}</div>` : ""}
+          <div class="information-button">Info</div>
+        </div>
+      </article>
+    `;
+  }
+
+}
+
+function groupWatchedMovies(movies) {
+  const groupedMovies = new Map();
+
+  movies.forEach((movie) => {
+    const tmdbId = String(movie.tmdb_id);
+    const existingMovie = groupedMovies.get(tmdbId);
+
+    if (!existingMovie) {
+      groupedMovies.set(tmdbId, {
+        ...movie,
+        watch_count: 1,
+      });
+      return;
+    }
+
+    existingMovie.watch_count += 1;
+    if (new Date(movie.watched_at || 0) > new Date(existingMovie.watched_at || 0)) {
+      groupedMovies.set(tmdbId, {
+        ...existingMovie,
+        ...movie,
+        watch_count: existingMovie.watch_count,
+      });
+    }
+  });
+
+  return [...groupedMovies.values()];
 }
 
 function loadAiPickPosters(posterlink) {
@@ -188,4 +286,13 @@ function formatTmdbMovieMeta(movie) {
   const minutes = movie.runtime % 60;
 
   return `${year} · ${genre === "Science Fiction" ? "Sci-Fi" : genre} · ${hours} h ${minutes} min`;
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }

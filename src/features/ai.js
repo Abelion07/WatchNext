@@ -3,7 +3,7 @@ export function AImode(){
     const sendAi = document.querySelector('#sendAi');
     const conversation = document.querySelector('#conversation');
 
-    function sendAiMessage() {
+    window.sendAiMessage = function sendAiMessage() {
       const value = aiInput.value.trim();
       if (!value) return;
 
@@ -21,10 +21,10 @@ export function AImode(){
       }, 520);
 
       conversation.scrollTop = conversation.scrollHeight;
-    }
+    };
 
-    sendAi.addEventListener('click', sendAiMessage);
+    sendAi.addEventListener('click', window.sendAiMessage);
     aiInput.addEventListener('keydown', event => {
-      if (event.key === 'Enter') sendAiMessage();
+      if (event.key === 'Enter') window.sendAiMessage();
     });
 }

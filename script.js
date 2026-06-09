@@ -6,15 +6,16 @@ import Main from "/src/components/main.js";
 import { Navigation } from "./src/features/navigation.js";
 import { AImode } from "./src/features/ai.js";
 import { initSpinWheel } from "./src/features/spinwheel.js";
+import { initAddMovieModal } from "./src/features/addMovieModal.js";
 
 //pages
 import { Landing } from "./src/pages/landing.js";
 import { Dashboard, loadDashboardMovies } from "./src/pages/dashboard.js";
 import { ContinueWatching, loadContinueWatching } from "./src/pages/ContinueWatching.js";
 import { AiRecs } from "./src/pages/AiRecs.js";
-import { Roulette } from "./src/pages/Roulette.js";
-import { Analytics } from "./src/pages/Analytics.js";
-import { FilmDetail } from "./src/pages/FilmDetail.js";
+import { Roulette } from "./src/pages/roulette.js";
+import { Analytics } from "./src/pages/analytics.js";
+import { FilmDetail, initFilmDetailActions } from "./src/pages/FilmDetail.js";
 
 
 const app = document.querySelector(".app");
@@ -27,6 +28,8 @@ app.innerHTML = `
 Navigation();
 AImode();
 initSpinWheel();
+initAddMovieModal();
+initFilmDetailActions();
 
 loadDashboardMovies();
 loadContinueWatching()

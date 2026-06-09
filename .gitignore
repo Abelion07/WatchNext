@@ -1,4 +1,4 @@
 .env
 kulcsok.txt
 node_modules
-tmdb.js
+/tmdb.js

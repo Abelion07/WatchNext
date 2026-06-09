@@ -1,3 +1,11 @@
+import { rec_movies } from "../data/defaultmovies.js";
+
+const movies = rec_movies.map((movie) => ({
+  title: movie.title,
+  meta: movie.meta || "Movie night pick",
+  emoji: "🎬",
+}));
+
 export function initSpinWheel() {
   let spinning = false;
   let rotation = 0;

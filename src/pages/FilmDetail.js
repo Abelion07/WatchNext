@@ -1,37 +1,247 @@
+import {
+  getWatchedStatus,
+  isMovieInWatchlist,
+  markMovieAsWatched,
+  removeMovieFromWatchlist,
+  saveMovieToWatchlist,
+} from "../services/moviesApi.js";
+
 export function FilmDetail() {
   return `
-    <section id="detail" class="page">
+    <section id="detail" class="page movie-detail-screen">
         <div class="detail-hero" data-detail-hero>
+          <div class="detail-topbar">
+            <button class="icon-button" type="button" data-page="dashboard" aria-label="Back">‹</button>
+            <div class="detail-top-actions">
+              <button class="icon-button" type="button" aria-label="Search">⌕</button>
+              <button class="icon-button" type="button" aria-label="Share">⇧</button>
+              <button class="icon-button" type="button" aria-label="More">⋮</button>
+            </div>
+          </div>
           <div class="detail-meta">
             <div class="detail-poster" data-detail-poster>🎬</div>
             <div class="detail-info">
               <h2 data-detail-title>Choose a movie</h2>
-              <p data-detail-meta>Open a movie from the dashboard.</p>
-              <p><span class="detail-rating" data-detail-rating></span></p>
-              <div class="tags" data-detail-genres></div>
+              <div class="detail-fact-line">
+                <span class="detail-rating" data-detail-rating></span>
+                <span data-detail-meta>Open a movie from the dashboard.</span>
+              </div>
+              <div class="detail-cert-row">
+                <span>14+</span>
+                <div class="tags" data-detail-genres></div>
+              </div>
+              <div class="available-row">
+                <span>Available on:</span>
+                <strong>NETFLIX</strong>
+                <strong>prime video</strong>
+                <strong>tv+</strong>
+              </div>
             </div>
           </div>
         </div>
         <div class="detail-body">
-          <div>
-            <div class="detail-actions"><select class="status-select"><option>✓ Completed</option><option>▶ Watching</option><option>📋 Planned</option><option>⟳ Rewatching</option><option>⏸ On Hold</option><option>✗ Dropped</option></select><button class="btn-small primary">+ Watchlist</button><button class="btn-small ghost">♡ Favourite</button><button class="btn-small ghost">▶ Trailer</button></div>
-            <div class="panel"><h3>Synopsis</h3><p data-detail-overview>Select Info on a movie card to see its TMDB details here.</p></div>
-            <div style="height:14px"></div>
-            <div class="panel"><h3>Production</h3><div class="detail-list" data-detail-production></div></div>
+          <div class="detail-main-column">
+            <button class="detail-trailer-button" type="button">▣ Trailer</button>
+            <div class="detail-actions"><button class="btn-small ghost" type="button" data-add-detail-movie>+ My List</button><button class="btn-small ghost btn-watch-state" type="button" data-open-watched-modal>◎ Watched</button><button class="btn-small ghost" type="button">♧ Rate</button><button class="btn-small ghost btn-danger-outline hidden" type="button" data-remove-detail-movie>Eltávolítás</button></div>
+            <div class="detail-action-message" data-detail-action-message></div>
+            <div class="detail-overview-block">
+              <p data-detail-overview>Select Info on a movie card to see its TMDB details here.</p>
+            </div>
+            <div class="detail-director-line">Director: <span data-detail-director>Unknown</span></div>
+            <div class="detail-tabs" role="tablist">
+              <button class="active" type="button">Top Cast & Crew</button>
+              <button type="button">Media</button>
+              <button type="button">User Reviews</button>
+            </div>
+            <div class="cast-strip" data-detail-cast>
+              <article class="cast-card"><div class="cast-avatar">🎬</div><strong>Cast</strong><span>Open a movie</span></article>
+              <article class="cast-card"><div class="cast-avatar">★</div><strong>Media</strong><span>TMDB detail</span></article>
+              <article class="cast-card"><div class="cast-avatar">✦</div><strong>Reviews</strong><span>Your notes</span></article>
+            </div>
+            <div class="detail-secondary-grid">
+              <div class="panel"><h3>Production</h3><div class="detail-list" data-detail-production></div></div>
+              <div class="panel"><h3>Details</h3><div class="detail-list" data-detail-facts></div></div>
+              <div class="panel"><h3>Watch history</h3><div class="detail-list" data-watch-history><div class="detail-row"><strong>Watched</strong><span>Not logged yet</span></div></div></div>
+              <div class="panel"><h3>Tagline</h3><p data-detail-tagline>No tagline loaded.</p></div>
+            </div>
           </div>
-          <aside>
-            <div class="panel"><h3>Details</h3><div class="detail-list" data-detail-facts></div></div>
-            <div style="height:14px"></div>
-            <div class="panel"><h3>Tagline</h3><p data-detail-tagline>No tagline loaded.</p></div>
-            <div style="height:14px"></div>
-            <div class="panel"><h3>Your notes</h3><textarea placeholder="Add a personal note about this film..."></textarea></div>
-          </aside>
         </div>
-      </section>`;
+      </section>
+      <div class="watch-modal-backdrop" data-watch-modal aria-hidden="true">
+        <aside class="watch-modal-panel" role="dialog" aria-modal="true" aria-labelledby="watch-modal-title">
+          <div class="watch-modal-head">
+            <div>
+              <div class="watch-modal-kicker">Naplózás</div>
+              <h2 id="watch-modal-title">Megnézett film</h2>
+              <p data-watch-modal-movie>Válassz értékelést és írj egy rövid jegyzetet.</p>
+            </div>
+            <button class="modal-close" type="button" data-close-watched-modal aria-label="Bezárás">×</button>
+          </div>
+          <div class="watch-rating-grid" data-watch-rating>
+            ${[10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
+              .map((rating) => `<button type="button" data-watch-rating-value="${rating}">${rating}</button>`)
+              .join("")}
+          </div>
+          <label class="watch-notes-field">
+            <span>Your notes</span>
+            <textarea data-watch-notes placeholder="Mi maradt meg belőle? Hangulat, kedvenc jelenet, kinek ajánlanád..."></textarea>
+          </label>
+          <div class="watch-modal-actions">
+            <button class="btn-small ghost" type="button" data-close-watched-modal>Mégse</button>
+            <button class="btn-small primary" type="button" data-submit-watched>Mentés watched-be</button>
+          </div>
+        </aside>
+      </div>`;
 }
 
 const posterBaseUrl = "https://image.tmdb.org/t/p/w500";
 const backdropBaseUrl = "https://image.tmdb.org/t/p/w1280";
+let currentMovie = null;
+let detailActionsInitialized = false;
+let currentMovieInWatchlist = false;
+let currentMovieWatchCount = 0;
+
+export function initFilmDetailActions() {
+  if (detailActionsInitialized) return;
+
+  document.addEventListener("click", async (event) => {
+    const addButton = event.target.closest("[data-add-detail-movie]");
+    if (!addButton) return;
+
+    if (!currentMovie) {
+      addButton.textContent = "Válassz filmet";
+      return;
+    }
+
+    if (currentMovieInWatchlist) return;
+
+    const originalText = addButton.textContent;
+
+    try {
+      setActionMessage("");
+      addButton.disabled = true;
+      addButton.textContent = "Mentés...";
+      await saveMovieToWatchlist(currentMovie);
+      setWatchlistActionState(true);
+      setActionMessage("Hozzáadva a listádhoz.");
+      document.dispatchEvent(new CustomEvent("movies:changed"));
+    } catch (error) {
+      setActionMessage(error.message, true);
+      addButton.textContent = error.message;
+      setTimeout(() => {
+        addButton.textContent = originalText;
+      }, 2400);
+    } finally {
+      addButton.disabled = currentMovieInWatchlist;
+    }
+  });
+
+  document.addEventListener("click", async (event) => {
+    const removeButton = event.target.closest("[data-remove-detail-movie]");
+    if (!removeButton || !currentMovie) return;
+
+    const originalText = removeButton.textContent;
+
+    try {
+      setActionMessage("");
+      removeButton.disabled = true;
+      removeButton.textContent = "Eltávolítás...";
+      await removeMovieFromWatchlist(currentMovie.id);
+      setWatchlistActionState(false);
+      setActionMessage("Eltávolítva a listádból.");
+      document.dispatchEvent(new CustomEvent("movies:changed"));
+    } catch (error) {
+      setActionMessage(error.message, true);
+      removeButton.textContent = error.message;
+      setTimeout(() => {
+        removeButton.textContent = originalText;
+      }, 2400);
+    } finally {
+      removeButton.disabled = false;
+    }
+  });
+
+  document.addEventListener("click", (event) => {
+    const openButton = event.target.closest("[data-open-watched-modal]");
+    const closeButton = event.target.closest("[data-close-watched-modal]");
+    const modal = document.querySelector("[data-watch-modal]");
+
+    if (openButton) {
+      if (!currentMovie) {
+        openButton.textContent = "Válassz filmet";
+        return;
+      }
+
+      openWatchModal();
+      return;
+    }
+
+    if (closeButton || event.target === modal) {
+      closeWatchModal();
+    }
+  });
+
+  document.addEventListener("click", (event) => {
+    const ratingButton = event.target.closest("[data-watch-rating-value]");
+    if (!ratingButton) return;
+
+    document.querySelectorAll("[data-watch-rating-value]").forEach((button) => {
+      button.classList.toggle("selected", button === ratingButton);
+    });
+  });
+
+  document.addEventListener("click", async (event) => {
+    const watchedButton = event.target.closest("[data-submit-watched]");
+    if (!watchedButton) return;
+
+    if (!currentMovie) {
+      watchedButton.textContent = "Válassz filmet";
+      return;
+    }
+
+    const notesInput = document.querySelector("[data-watch-notes]");
+    const rating = getSelectedWatchRating();
+    const originalText = watchedButton.textContent;
+
+    if (!rating) {
+      watchedButton.textContent = "Adj értékelést";
+      setTimeout(() => {
+        watchedButton.textContent = originalText;
+      }, 1800);
+      return;
+    }
+
+    try {
+      setActionMessage("");
+      watchedButton.disabled = true;
+      watchedButton.textContent = "Mentés...";
+      await markMovieAsWatched(currentMovie, rating, notesInput?.value.trim() || "");
+      currentMovieWatchCount += 1;
+      setWatchlistActionState(false);
+      setWatchedActionState(currentMovieWatchCount);
+      refreshWatchedActionState(currentMovie.id);
+      closeWatchModal();
+      setActionMessage(currentMovieWatchCount > 1 ? "Újranézés naplózva." : "Áthelyezve a watched listába.");
+      document.dispatchEvent(new CustomEvent("movies:changed"));
+    } catch (error) {
+      setActionMessage(error.message, true);
+      watchedButton.textContent = error.message;
+      setTimeout(() => {
+        watchedButton.textContent = originalText;
+      }, 2400);
+    } finally {
+      watchedButton.disabled = false;
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeWatchModal();
+    }
+  });
+
+  detailActionsInitialized = true;
+}
 
 function formatRuntime(runtime) {
   if (!runtime) return "Runtime unknown";
@@ -76,17 +286,44 @@ function setText(selector, value) {
 export function renderMovieDetail(movie) {
   if (!movie) return;
 
+  currentMovie = movie;
+  currentMovieInWatchlist = false;
+  currentMovieWatchCount = 0;
+
+  const notesInput = document.querySelector("[data-watch-notes]");
+  const watchedButton = document.querySelector("[data-open-watched-modal]");
+  const modalMovie = document.querySelector("[data-watch-modal-movie]");
+
+  if (notesInput) notesInput.value = "";
+  document.querySelectorAll("[data-watch-rating-value]").forEach((button) => {
+    button.classList.remove("selected");
+  });
+  if (watchedButton) {
+    watchedButton.disabled = false;
+    watchedButton.textContent = "Megnézve";
+  }
+  if (modalMovie) {
+    modalMovie.textContent = movie.title || movie.original_title || "Válassz értékelést és jegyzetet.";
+  }
+  setActionMessage("");
+
   const hero = document.querySelector("[data-detail-hero]");
   const poster = document.querySelector("[data-detail-poster]");
   const genres = document.querySelector("[data-detail-genres]");
   const production = document.querySelector("[data-detail-production]");
   const facts = document.querySelector("[data-detail-facts]");
+  const cast = document.querySelector("[data-detail-cast]");
 
   const genreNames = movie.genres?.map((genre) => genre.name) ?? [];
   const companies = movie.production_companies?.slice(0, 4) ?? [];
+  const castMembers = movie.credits?.cast?.slice(0, 6) ?? [];
+  const director =
+    movie.credits?.crew?.find((person) => person.job === "Director")?.name ||
+    companies[0]?.name ||
+    "Unknown";
 
   if (hero && movie.backdrop_path) {
-    hero.style.backgroundImage = `linear-gradient(90deg, rgba(5, 5, 18, 0.92), rgba(5, 5, 18, 0.34)), url(${backdropBaseUrl + movie.backdrop_path})`;
+    hero.style.backgroundImage = `linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.16) 48%, rgba(5,5,5,0.98) 100%), url(${backdropBaseUrl + movie.backdrop_path})`;
   } else if (hero) {
     hero.style.backgroundImage = "";
   }
@@ -107,6 +344,7 @@ export function renderMovieDetail(movie) {
   setText("[data-detail-rating]", `⭐ ${movie.vote_average?.toFixed(2) ?? "N/A"} · ${movie.vote_count ?? 0} votes`);
   setText("[data-detail-overview]", movie.overview || "No synopsis available.");
   setText("[data-detail-tagline]", movie.tagline || "No tagline available.");
+  setText("[data-detail-director]", director);
 
   if (genres) {
     genres.innerHTML = genreNames
@@ -131,4 +369,159 @@ export function renderMovieDetail(movie) {
       <div class="detail-row"><strong>TMDB ID</strong><span>${movie.id ?? "N/A"}</span></div>
     `;
   }
+
+  if (cast) {
+    cast.innerHTML = castMembers.length
+      ? castMembers
+          .map((person) => {
+            const profileUrl = person.profile_path
+              ? `https://image.tmdb.org/t/p/w185${person.profile_path}`
+              : "";
+            return `
+              <article class="cast-card">
+                <div class="cast-avatar" style="${profileUrl ? `background-image:url(${profileUrl})` : ""}">${profileUrl ? "" : "★"}</div>
+                <strong>${escapeHtml(person.name)}</strong>
+                <span>${escapeHtml(person.character || "Cast")}</span>
+              </article>
+            `;
+          })
+          .join("")
+      : `
+        <article class="cast-card"><div class="cast-avatar">🎬</div><strong>Cast</strong><span>Not loaded</span></article>
+        <article class="cast-card"><div class="cast-avatar">✦</div><strong>Media</strong><span>TMDB detail</span></article>
+        <article class="cast-card"><div class="cast-avatar">★</div><strong>Reviews</strong><span>Your notes</span></article>
+      `;
+  }
+
+  setWatchlistActionState(false, true);
+  refreshWatchlistActionState(movie.id);
+  refreshWatchedActionState(movie.id);
+}
+
+async function refreshWatchlistActionState(tmdbId) {
+  try {
+    const inWatchlist = await isMovieInWatchlist(tmdbId);
+
+    if (currentMovie && String(currentMovie.id) === String(tmdbId)) {
+      setWatchlistActionState(inWatchlist);
+    }
+  } catch (error) {
+    setWatchlistActionState(false);
+  }
+}
+
+function setWatchlistActionState(inWatchlist, isLoading = false) {
+  currentMovieInWatchlist = inWatchlist;
+
+  const addButton = document.querySelector("[data-add-detail-movie]");
+  const removeButton = document.querySelector("[data-remove-detail-movie]");
+
+  if (addButton) {
+    addButton.classList.toggle("hidden", inWatchlist && !isLoading);
+    addButton.disabled = isLoading;
+    addButton.textContent = isLoading ? "Checking..." : "+ My List";
+  }
+
+  if (removeButton) {
+    removeButton.classList.toggle("hidden", !inWatchlist);
+    removeButton.disabled = isLoading;
+    if (!isLoading) removeButton.textContent = "Remove";
+  }
+}
+
+async function refreshWatchedActionState(tmdbId) {
+  try {
+    const watchedStatus = await getWatchedStatus(tmdbId);
+
+    if (currentMovie && String(currentMovie.id) === String(tmdbId)) {
+      currentMovieWatchCount = watchedStatus.watchCount;
+      setWatchedActionState(watchedStatus.watchCount);
+      renderWatchHistory(watchedStatus);
+    }
+  } catch (error) {
+    currentMovieWatchCount = 0;
+    setWatchedActionState(0);
+    renderWatchHistory({ watchCount: 0, watches: [] });
+  }
+}
+
+function setWatchedActionState(watchCount) {
+  const watchedButton = document.querySelector("[data-open-watched-modal]");
+  const modalTitle = document.querySelector("#watch-modal-title");
+  const submitButton = document.querySelector("[data-submit-watched]");
+
+  if (watchedButton) {
+    watchedButton.textContent = watchCount > 0 ? "◎ Rewatch" : "◎ Watched";
+    watchedButton.classList.toggle("primary", watchCount > 0);
+    watchedButton.classList.toggle("ghost", watchCount === 0);
+  }
+  if (modalTitle) {
+    modalTitle.textContent = watchCount > 0 ? "Újranézés" : "Megnézett film";
+  }
+  if (submitButton) {
+    submitButton.textContent = watchCount > 0 ? "Újranézés mentése" : "Mentés watched-be";
+  }
+}
+
+function openWatchModal() {
+  const modal = document.querySelector("[data-watch-modal]");
+  if (!modal) return;
+
+  modal.classList.add("open");
+  modal.setAttribute("aria-hidden", "false");
+}
+
+function closeWatchModal() {
+  const modal = document.querySelector("[data-watch-modal]");
+  if (!modal) return;
+
+  modal.classList.remove("open");
+  modal.setAttribute("aria-hidden", "true");
+}
+
+function getSelectedWatchRating() {
+  const selectedRating = document.querySelector("[data-watch-rating-value].selected");
+  return Number(selectedRating?.dataset.watchRatingValue || 0);
+}
+
+function renderWatchHistory(watchedStatus) {
+  const history = document.querySelector("[data-watch-history]");
+  if (!history) return;
+
+  const watches = watchedStatus.watches || [];
+
+  if (!watches.length) {
+    history.innerHTML = `<div class="detail-row"><strong>Watched</strong><span>Not logged yet</span></div>`;
+    return;
+  }
+
+  const totalLabel =
+    watches.length > 1 ? `${watches.length} times` : "1 time";
+  const recentWatches = watches.slice(0, 3);
+
+  history.innerHTML = `
+    <div class="detail-row"><strong>Total</strong><span>${totalLabel}</span></div>
+    ${recentWatches
+      .map((watch, index) => {
+        const date = watch.watched_at
+          ? new Intl.DateTimeFormat("hu-HU", {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            }).format(new Date(watch.watched_at))
+          : "Unknown date";
+        const label = index === 0 ? "Latest" : `#${watches.length - index}`;
+
+        return `<div class="detail-row"><strong>${label}</strong><span>${date} · ${Number(watch.UserVote || 0).toFixed(1)}/10</span></div>`;
+      })
+      .join("")}
+  `;
+}
+
+function setActionMessage(message, isError = false) {
+  const element = document.querySelector("[data-detail-action-message]");
+  if (!element) return;
+
+  element.textContent = message;
+  element.classList.toggle("error", isError);
 }
