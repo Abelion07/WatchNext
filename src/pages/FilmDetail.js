@@ -198,7 +198,7 @@ export function initFilmDetailActions() {
           removeOption.textContent = "Removing...";
           await removeMovieFromWatchlist(currentMovie.id);
           setWatchlistActionState(false);
-          setActionMessage("Eltávolítva a listádból.");
+          setActionMessage("Removed from My List");
           document.dispatchEvent(new CustomEvent("movies:changed"));
         } catch (error) {
           setActionMessage(error.message, true);
@@ -219,7 +219,7 @@ export function initFilmDetailActions() {
           removeOption.textContent = "Adding...";
           await saveMovieToWatchlist(currentMovie);
           setWatchlistActionState(true);
-          setActionMessage("Hozzáadva a listádhoz.");
+          setActionMessage("Added to My List");
           document.dispatchEvent(new CustomEvent("movies:changed"));
         } catch (error) {
           setActionMessage(error.message, true);
@@ -324,7 +324,7 @@ export function initFilmDetailActions() {
       setReviewBlock(currentMovieLatestRating, currentMovieLatestNotes);
       refreshWatchedActionState(currentMovie.id);
       closeWatchModal();
-      setActionMessage(currentMovieWatchCount > 1 ? "Újranézés naplózva." : "Áthelyezve a watched listába.");
+      setActionMessage(currentMovieWatchCount > 1 ? "Watched again." : "Moved to watched.");
       document.dispatchEvent(new CustomEvent("movies:changed"));
     } catch (error) {
       setActionMessage(error.message, true);
