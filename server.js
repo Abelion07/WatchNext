@@ -1,10 +1,13 @@
+import "dotenv/config";
+import Database from "better-sqlite3";
 import express from "express";
-import { supabase } from "./supabaseClient.js";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const TMDB_API_KEY = process.env.TMDB_API_KEY || "c6455f4bc87edf27444b6349f528c1b6";
+const db = new Database("movies.db");
 
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
 app.use(express.static("."));
 
 app.use((req, res, next) => {
@@ -17,80 +20,83 @@ app.use((req, res, next) => {
   next();
 });
 
-app.get("/api/getmovies", async (req, res) => {
-  const { data, error } = await supabase
-    .from("UserWatchData")
-    .select(`
-      tmdb_id,
-      user_status,
-      MovieData (
-        id,
-        tmdb_id,
-        title,
-        backdrop_path,
-        budget,
-        genres,
-        imdb_id,
-        original_languages,
-        overview,
-        popularity,
-        poster_path,
-        production_companies,
-        release_date,
-        revenue,
-        runtime,
-        status,
-        vote_average,
-        vote_count
-      )
-    `)
-    .order("id", { ascending: true });
+initDatabase();
 
-  if (error) {
-    return res.status(500).json({
-      ok: false,
-      error: error.message,
-    });
-  }
+function initDatabase() {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS movies (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tmdb_id TEXT NOT NULL UNIQUE,
+      user_vote INTEGER,
+      watch_notes TEXT,
+      watched_at TEXT,
+      status TEXT DEFAULT 'queue',
+      director TEXT,
+      genres INTEGER
+    )
+  `);
+  db.prepare("UPDATE movies SET status = 'queue' WHERE status = 'want_to_watch'").run();
+}
 
-  return res.json({
-    ok: true,
-    movies: (data ?? [])
-      .map((row) => ({
-        ...row.MovieData,
-        user_status: row.user_status,
-      }))
-      .filter((movie) => movie?.tmdb_id),
-  });
-});
+function normalizeStatus(status) {
+  return status === "watched" ? "watched" : "queue";
+}
 
-app.post("/api/movies", async (req, res) => {
-  const movie = req.body?.movie;
+function getTmdbId(movie) {
+  return movie?.id ? String(movie.id) : "";
+}
 
-  if (!movie?.id || !movie?.title) {
-    return res.status(400).json({
-      ok: false,
-      error: "Missing movie details.",
-    });
-  }
+function getDirectorName(movie, body = {}) {
+  return (
+    body.director ||
+    movie?.director ||
+    movie?.credits?.crew?.find((person) => person.job === "Director")?.name ||
+    null
+  );
+}
 
-  const tmdbId = String(movie.id);
+function getGenreId(movie, body = {}) {
+  const bodyGenreId = Number(body.genre_id ?? body.genres);
+  const movieGenreId = Number(
+    movie?.genres?.find((genre) => Number.isFinite(Number(genre.id)))?.id,
+  );
 
-  const movieRow = {
+  if (Number.isInteger(bodyGenreId)) return bodyGenreId;
+  if (Number.isInteger(movieGenreId)) return movieGenreId;
+
+  return null;
+}
+
+function getMovieGenresText(movie) {
+  return movie?.genres?.map((genre) => genre.name).filter(Boolean).join(", ") || null;
+}
+
+function getProductionCompaniesText(movie) {
+  return (
+    movie?.production_companies
+      ?.map((company) => company.name)
+      .filter(Boolean)
+      .join(", ") || null
+  );
+}
+
+function mapMovieDetails(movie) {
+  if (!movie?.id) return null;
+
+  return {
     id: movie.id,
-    tmdb_id: tmdbId,
+    tmdb_id: String(movie.id),
     title: movie.title,
     backdrop_path: movie.backdrop_path,
     budget: movie.budget,
-    genres: movie.genres?.map((genre) => genre.name).join(", ") || null,
-    imdb_id: null,
+    genres: getMovieGenresText(movie),
+    imdb_id: movie.imdb_id || null,
     original_languages: movie.original_language,
+    original_language: movie.original_language,
     overview: movie.overview,
     popularity: Math.round(Number(movie.popularity || 0)),
     poster_path: movie.poster_path,
-    production_companies:
-      movie.production_companies?.map((company) => company.name).join(", ") ||
-      null,
+    production_companies: getProductionCompaniesText(movie),
     release_date: movie.release_date,
     revenue: movie.revenue,
     runtime: movie.runtime,
@@ -98,175 +104,194 @@ app.post("/api/movies", async (req, res) => {
     vote_average: movie.vote_average,
     vote_count: movie.vote_count,
   };
+}
 
-  const { data: savedMovie, error: movieError } = await supabase
-    .from("MovieData")
-    .upsert(movieRow, { onConflict: "id" })
-    .select()
-    .single();
+async function fetchTmdbMovie(tmdbId) {
+  const response = await fetch(
+    `https://api.themoviedb.org/3/movie/${encodeURIComponent(
+      tmdbId,
+    )}?api_key=${TMDB_API_KEY}&append_to_response=credits`,
+  );
 
-  if (movieError) {
-    return res.status(500).json({
-      ok: false,
-      error: movieError.message,
-    });
+  if (!response.ok) {
+    throw new Error(`TMDB movie ${tmdbId} could not be loaded.`);
   }
 
-  const { data: existingWatchRows, error: watchLookupError } = await supabase
-    .from("UserWatchData")
-    .select("id")
-    .eq("tmdb_id", tmdbId)
-    .limit(1);
+  return response.json();
+}
 
-  if (watchLookupError) {
-    return res.status(500).json({
-      ok: false,
-      error: watchLookupError.message,
-    });
-  }
+async function enrichMovieRow(row) {
+  const tmdbMovie = await fetchTmdbMovie(row.tmdb_id);
+  const movie = mapMovieDetails(tmdbMovie);
 
-  const existingWatchRow = existingWatchRows?.[0];
-  const watchRow = {
-    tmdb_id: tmdbId,
-    user_status: req.body?.user_status || "queued",
+  return {
+    ...movie,
+    watched_id: row.id,
+    user_vote: row.user_vote,
+    UserVote: row.user_vote,
+    watch_notes: row.watch_notes,
+    watched_at: row.watched_at,
+    user_status: normalizeStatus(row.status),
+    director: row.director || getDirectorName(tmdbMovie),
+    genre_id: row.genres,
   };
+}
 
-  const watchQuery = existingWatchRow
-    ? supabase
-        .from("UserWatchData")
-        .update(watchRow)
-        .eq("id", existingWatchRow.id)
-        .select()
-        .single()
-    : supabase.from("UserWatchData").insert(watchRow).select().single();
+async function enrichMovieRows(rows) {
+  return Promise.all(rows.map((row) => enrichMovieRow(row)));
+}
 
-  const { data: savedWatchRow, error: watchError } = await watchQuery;
+function getMovieRow(tmdbId) {
+  return db.prepare("SELECT * FROM movies WHERE tmdb_id = ?").get(String(tmdbId));
+}
 
-  if (watchError) {
-    return res.status(500).json({
-      ok: false,
-      error: watchError.message,
+app.get("/api/getmovies", async (req, res) => {
+  try {
+    const rows = db
+      .prepare("SELECT * FROM movies WHERE status = 'queue' ORDER BY id DESC")
+      .all();
+    const movies = await enrichMovieRows(rows);
+
+    return res.json({
+      ok: true,
+      movies,
     });
-  }
-
-  return res.status(201).json({
-    ok: true,
-    movie: {
-      ...savedMovie,
-      user_status: savedWatchRow.user_status,
-    },
-  });
-});
-
-app.get("/api/movies/:tmdbId", async (req, res) => {
-  const tmdbId = String(req.params.tmdbId);
-
-  const { data, error } = await supabase
-    .from("UserWatchData")
-    .select("id, tmdb_id, user_status")
-    .eq("tmdb_id", tmdbId)
-    .maybeSingle();
-
-  if (error) {
+  } catch (error) {
     return res.status(500).json({
       ok: false,
       error: error.message,
     });
   }
+});
+
+app.post("/api/movies", async (req, res) => {
+  const movie = req.body?.movie;
+  const tmdbId = getTmdbId(movie);
+
+  if (!tmdbId) {
+    return res.status(400).json({
+      ok: false,
+      error: "Missing TMDB movie id.",
+    });
+  }
+
+  const existingMovie = getMovieRow(tmdbId);
+  const nextStatus =
+    existingMovie?.status === "watched"
+      ? "watched"
+      : normalizeStatus(req.body?.user_status);
+
+  try {
+    db.prepare(
+      `
+      INSERT INTO movies (tmdb_id, status, director, genres)
+      VALUES (@tmdb_id, @status, @director, @genres)
+      ON CONFLICT(tmdb_id) DO UPDATE SET
+        status = @status,
+        director = COALESCE(@director, director),
+        genres = COALESCE(@genres, genres)
+      `,
+    ).run({
+      tmdb_id: tmdbId,
+      status: nextStatus,
+      director: getDirectorName(movie, req.body),
+      genres: getGenreId(movie, req.body),
+    });
+
+    const savedRow = getMovieRow(tmdbId);
+    const savedMovie = {
+      ...mapMovieDetails(movie),
+      watched_id: savedRow.id,
+      user_vote: savedRow.user_vote,
+      UserVote: savedRow.user_vote,
+      watch_notes: savedRow.watch_notes,
+      watched_at: savedRow.watched_at,
+      user_status: normalizeStatus(savedRow.status),
+      director: savedRow.director,
+      genre_id: savedRow.genres,
+    };
+
+    return res.status(existingMovie ? 200 : 201).json({
+      ok: true,
+      movie: savedMovie,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      error: error.message,
+    });
+  }
+});
+
+app.get("/api/movies/:tmdbId", (req, res) => {
+  const row = getMovieRow(req.params.tmdbId);
 
   return res.json({
     ok: true,
-    in_watchlist: Boolean(data),
-    watch: data,
+    in_watchlist: row?.status === "queue",
+    watch: row
+      ? {
+          id: row.id,
+          tmdb_id: row.tmdb_id,
+          user_status: normalizeStatus(row.status),
+        }
+      : null,
   });
 });
 
 app.get("/api/watched", async (req, res) => {
-  const { data, error } = await supabase
-    .from("Watched")
-    .select(`
-      id,
-      tmdb_id,
-      UserVote,
-      watch_notes,
-      watched_at,
-      MovieData (
-        id,
-        tmdb_id,
-        title,
-        backdrop_path,
-        budget,
-        genres,
-        imdb_id,
-        original_languages,
-        overview,
-        popularity,
-        poster_path,
-        production_companies,
-        release_date,
-        revenue,
-        runtime,
-        status,
-        vote_average,
-        vote_count
-      )
-    `)
-    .order("watched_at", { ascending: false });
+  try {
+    const rows = db
+      .prepare("SELECT * FROM movies WHERE status = 'watched' ORDER BY watched_at DESC")
+      .all();
+    const movies = await enrichMovieRows(rows);
 
-  if (error) {
+    return res.json({
+      ok: true,
+      movies,
+    });
+  } catch (error) {
     return res.status(500).json({
       ok: false,
       error: error.message,
     });
   }
-
-  return res.json({
-    ok: true,
-    movies: (data ?? [])
-      .map((row) => ({
-        ...row.MovieData,
-        watched_id: row.id,
-        user_vote: row.UserVote,
-        watch_notes: row.watch_notes,
-        watched_at: row.watched_at,
-      }))
-      .filter((movie) => movie?.tmdb_id),
-  });
 });
 
-app.get("/api/watched/:tmdbId", async (req, res) => {
-  const tmdbId = String(req.params.tmdbId);
-
-  const { data, error } = await supabase
-    .from("Watched")
-    .select("id, tmdb_id, UserVote, watch_notes, watched_at")
-    .eq("tmdb_id", tmdbId)
-    .order("watched_at", { ascending: false });
-
-  if (error) {
-    return res.status(500).json({
-      ok: false,
-      error: error.message,
-    });
-  }
+app.get("/api/watched/:tmdbId", (req, res) => {
+  const row = getMovieRow(req.params.tmdbId);
+  const isWatched = row?.status === "watched";
+  const watch = isWatched
+    ? {
+        id: row.id,
+        tmdb_id: row.tmdb_id,
+        UserVote: row.user_vote,
+        user_vote: row.user_vote,
+        watch_notes: row.watch_notes,
+        watched_at: row.watched_at,
+        user_status: row.status,
+        director: row.director,
+        genres: row.genres,
+      }
+    : null;
 
   return res.json({
     ok: true,
-    watch_count: data?.length || 0,
-    latest_watch: data?.[0] || null,
-    watches: data || [],
+    watch_count: isWatched ? 1 : 0,
+    latest_watch: watch,
+    watches: watch ? [watch] : [],
   });
 });
 
 app.post("/api/watched", async (req, res) => {
   const movie = req.body?.movie;
-  const tmdbId = movie?.id ? String(movie.id) : "";
+  const tmdbId = getTmdbId(movie);
   const userVote = Number(req.body?.user_vote || 0);
 
-  if (!movie?.id || !movie?.title) {
+  if (!tmdbId) {
     return res.status(400).json({
       ok: false,
-      error: "Missing movie details.",
+      error: "Missing TMDB movie id.",
     });
   }
 
@@ -277,101 +302,86 @@ app.post("/api/watched", async (req, res) => {
     });
   }
 
-  const movieRow = {
-    id: movie.id,
-    tmdb_id: tmdbId,
-    title: movie.title,
-    backdrop_path: movie.backdrop_path,
-    budget: movie.budget,
-    genres: movie.genres?.map((genre) => genre.name).join(", ") || null,
-    imdb_id: null,
-    original_languages: movie.original_language,
-    overview: movie.overview,
-    popularity: Math.round(Number(movie.popularity || 0)),
-    poster_path: movie.poster_path,
-    production_companies:
-      movie.production_companies?.map((company) => company.name).join(", ") ||
-      null,
-    release_date: movie.release_date,
-    revenue: movie.revenue,
-    runtime: movie.runtime,
-    status: movie.status || "Released",
-    vote_average: movie.vote_average,
-    vote_count: movie.vote_count,
-  };
+  try {
+    const watchedAt = new Date().toISOString();
 
-  const { error: movieError } = await supabase
-    .from("MovieData")
-    .upsert(movieRow, { onConflict: "id" });
-
-  if (movieError) {
-    return res.status(500).json({
-      ok: false,
-      error: movieError.message,
+    db.prepare(
+      `
+      INSERT INTO movies (
+        tmdb_id,
+        user_vote,
+        watch_notes,
+        watched_at,
+        status,
+        director,
+        genres
+      )
+      VALUES (
+        @tmdb_id,
+        @user_vote,
+        @watch_notes,
+        @watched_at,
+        'watched',
+        @director,
+        @genres
+      )
+      ON CONFLICT(tmdb_id) DO UPDATE SET
+        user_vote = @user_vote,
+        watch_notes = @watch_notes,
+        watched_at = @watched_at,
+        status = 'watched',
+        director = COALESCE(@director, director),
+        genres = COALESCE(@genres, genres)
+      `,
+    ).run({
+      tmdb_id: tmdbId,
+      user_vote: userVote,
+      watch_notes: req.body?.watch_notes || null,
+      watched_at: watchedAt,
+      director: getDirectorName(movie, req.body),
+      genres: getGenreId(movie, req.body),
     });
-  }
 
-  const watchedRow = {
-    tmdb_id: tmdbId,
-    UserVote: userVote,
-    watch_notes: req.body?.watch_notes || null,
-    watched_at: new Date().toISOString(),
-  };
-  const { data: savedWatchedRow, error: watchedError } = await supabase
-    .from("Watched")
-    .insert(watchedRow)
-    .select()
-    .single();
+    const savedRow = getMovieRow(tmdbId);
 
-  if (watchedError) {
-    return res.status(500).json({
-      ok: false,
-      error: watchedError.message,
+    return res.status(200).json({
+      ok: true,
+      watched: {
+        id: savedRow.id,
+        tmdb_id: savedRow.tmdb_id,
+        UserVote: savedRow.user_vote,
+        user_vote: savedRow.user_vote,
+        watch_notes: savedRow.watch_notes,
+        watched_at: savedRow.watched_at,
+        user_status: savedRow.status,
+        director: savedRow.director,
+        genres: savedRow.genres,
+      },
     });
-  }
-
-  const { error: watchlistError } = await supabase
-    .from("UserWatchData")
-    .delete()
-    .eq("tmdb_id", tmdbId);
-
-  if (watchlistError) {
-    return res.status(500).json({
-      ok: false,
-      error: watchlistError.message,
-    });
-  }
-
-  return res.status(201).json({
-    ok: true,
-    watched: savedWatchedRow,
-  });
-});
-
-app.delete("/api/movies/:tmdbId", async (req, res) => {
-  const tmdbId = String(req.params.tmdbId);
-
-  const { error } = await supabase
-    .from("UserWatchData")
-    .delete()
-    .eq("tmdb_id", tmdbId);
-
-  if (error) {
+  } catch (error) {
     return res.status(500).json({
       ok: false,
       error: error.message,
     });
   }
+});
+
+app.delete("/api/movies/:tmdbId", (req, res) => {
+  const result = db
+    .prepare("DELETE FROM movies WHERE tmdb_id = ? AND status = 'queue'")
+    .run(String(req.params.tmdbId));
 
   return res.json({
     ok: true,
-    tmdb_id: tmdbId,
+    deleted: result.changes,
+    tmdb_id: String(req.params.tmdbId),
   });
 });
 
 app.get("/api/status", async (req, res) => {
   res.json({
     app: "movie-dashboard-api",
+    database: "movies.db",
     status: "running",
     timestamp: new Date().toISOString(),
   });

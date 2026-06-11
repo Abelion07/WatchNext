@@ -1,6 +1,7 @@
 import { rec_movies } from "../data/defaultmovies.js";
 import { renderMovieDetail } from "./FilmDetail.js";
 import { searchMovie } from "../services/tmdb.js";
+import { getWatchedMovies, getWatchlistMovies } from "../services/moviesApi.js";
 
 export function Dashboard() {
   const aiPicks = rec_movies
@@ -35,7 +36,7 @@ export function Dashboard() {
         <div class="section-head">
         <div class="section-title">Start watching</div>
             <div class="section-actions">
-              <button class="btn-small primary" type="button" data-open-add-movie>+ Film hozzáadása</button>
+              <button class="btn-small primary" type="button" data-open-add-movie>+ Add Movie</button>
               <div class="section-link" data-page="continue">View all</div>
             </div>
           </div>
@@ -46,10 +47,10 @@ export function Dashboard() {
         </div>
 
         <div class="stats">
-          <article class="stat-card"><div class="stat-value" style="color:var(--purple-light)">247</div><div class="stat-label">Films watched</div></article>
-          <article class="stat-card"><div class="stat-value" style="color:var(--red-light)">38</div><div class="stat-label">Series tracked</div></article>
-          <article class="stat-card"><div class="stat-value" style="color:var(--blue-light)">412h</div><div class="stat-label">Watch time</div></article>
-          <article class="stat-card"><div class="stat-value" style="color:var(--gold)">8.1</div><div class="stat-label">Average rating</div></article>
+          <article class="stat-card"><div class="stat-value" style="color:#F4F4F5" data-dashboard-stat="films">0</div><div class="stat-label">Films watched</div></article>
+          <article class="stat-card"><div class="stat-value" style="color:#F4F4F5" data-dashboard-stat="series">0</div><div class="stat-label">Series tracked</div></article>
+          <article class="stat-card"><div class="stat-value" style="color:#F4F4F5" data-dashboard-stat="watch-time">0h</div><div class="stat-label">Watch time</div></article>
+          <article class="stat-card"><div class="stat-value" style="color:#F4F4F5" data-dashboard-stat="rating">0.0</div><div class="stat-label">Average rating</div></article>
         </div>
 
         <div class="section"><div class="section-head"><div class="section-title">✨ AI picks for tonight</div><div class="section-link" data-page="ai">Ask AI →</div></div></div>
@@ -60,7 +61,7 @@ export function Dashboard() {
         <div class="section">
           <div class="section-head">
             <div>
-              <div class="section-title">Megnézett filmek</div>
+              <div class="section-title">Watched Movies</div>
               <div class="library-subtitle" data-dashboard-watched-summary>Loading watched movies...</div>
             </div>
           </div>
@@ -121,33 +122,13 @@ async function renderDashboardFromDatabase(posterlink) {
   if (!dashboard || !movieRow || !watchedRow || !summary || !watchedSummary) return;
 
   try {
-    const [watchlistResponse, watchedResponse] = await Promise.all([
-      fetch(getApiUrl("/api/getmovies")),
-      fetch(getApiUrl("/api/watched")),
+    const [movies, watchedMovies] = await Promise.all([
+      getWatchlistMovies(),
+      getWatchedMovies({ force: true }),
     ]);
-    const watchlistContentType = watchlistResponse.headers.get("content-type") || "";
-    const watchedContentType = watchedResponse.headers.get("content-type") || "";
-
-    if (!watchlistContentType.includes("application/json") || !watchedContentType.includes("application/json")) {
-      throw new Error("The movies API returned HTML instead of JSON. Start the backend with npm start and open http://localhost:3001.");
-    }
-
-    const [watchlistResult, watchedResult] = await Promise.all([
-      watchlistResponse.json(),
-      watchedResponse.json(),
-    ]);
-
-    if (!watchlistResponse.ok || !watchlistResult.ok) {
-      throw new Error(watchlistResult.error || "Could not load movies.");
-    }
-    if (!watchedResponse.ok || !watchedResult.ok) {
-      throw new Error(watchedResult.error || "Could not load watched movies.");
-    }
-
-    const movies = watchlistResult.movies || [];
-    const watchedMovies = watchedResult.movies || [];
     const watchlistMovies = movies.filter((movie) => movie.title);
     const visibleWatchedMovies = groupWatchedMovies(watchedMovies.filter((movie) => movie.title));
+    renderDashboardStats(dashboard, visibleWatchedMovies);
 
     summary.innerHTML = `You have <span>${movies.length} titles in your watchlist</span> · AI picked ${rec_movies.length} for tonight`;
     movieRow.innerHTML =
@@ -162,6 +143,7 @@ async function renderDashboardFromDatabase(posterlink) {
     movieRow.innerHTML = `<div class="card-meta">${error.message}</div>`;
     watchedSummary.textContent = "Could not load watched movies.";
     watchedRow.innerHTML = `<div class="card-meta">${error.message}</div>`;
+    renderDashboardStats(dashboard, []);
   }
 
   function renderContinueCard(movie) {
@@ -211,6 +193,37 @@ async function renderDashboardFromDatabase(posterlink) {
 
 }
 
+function renderDashboardStats(dashboard, watchedMovies) {
+  const totalWatchTime = watchedMovies.reduce((sum, movie) => {
+    return sum + Number(movie.runtime || 0) * Number(movie.watch_count || 1);
+  }, 0);
+  const ratedMovies = watchedMovies.filter((movie) => Number(movie.user_vote || 0) > 0);
+  const averageRating = ratedMovies.length
+    ? ratedMovies.reduce((sum, movie) => sum + Number(movie.user_vote || 0), 0) / ratedMovies.length
+    : 0;
+
+  setStatText(dashboard, "films", String(watchedMovies.length));
+  setStatText(dashboard, "series", "0");
+  setStatText(dashboard, "watch-time", formatWatchTime(totalWatchTime));
+  setStatText(dashboard, "rating", averageRating ? averageRating.toFixed(1) : "0.0");
+}
+
+function setStatText(dashboard, statName, value) {
+  const stat = dashboard.querySelector(`[data-dashboard-stat="${statName}"]`);
+  if (stat) stat.textContent = value;
+}
+
+function formatWatchTime(totalMinutes) {
+  const minutes = Math.max(0, Math.round(totalMinutes));
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+
+  if (!hours) return `${remainingMinutes}m`;
+  if (!remainingMinutes) return `${hours}h`;
+
+  return `${hours}h ${remainingMinutes}m`;
+}
+
 function groupWatchedMovies(movies) {
   const groupedMovies = new Map();
 
@@ -256,17 +269,6 @@ function loadAiPickPosters(posterlink) {
     meta.innerHTML = formatTmdbMovieMeta(movie);
     rating.innerHTML = `⭐ ${movie.vote_average.toFixed(1)}`;
   });
-}
-
-function getApiUrl(path) {
-  const isBackendOrigin =
-    window.location.hostname === "localhost" && window.location.port === "3001";
-
-  if (isBackendOrigin) {
-    return path;
-  }
-
-  return `http://localhost:3001${path}`;
 }
 
 function formatMovieMeta(movie) {

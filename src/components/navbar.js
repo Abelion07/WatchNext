@@ -6,12 +6,10 @@ export default function Navbar() {
         <button class="nav-link" data-page="landing"><span>⌂</span>Landing</button>
         <button class="nav-link active" data-page="dashboard"><span>◉</span>Dashboard</button>
         <button class="nav-link" data-page="ai"><span>✦</span>AI Recs</button>
-        <button class="nav-link" data-page="roulette"><span>◌</span>Roulette</button>
-        <button class="nav-link" data-page="analytics"><span>▣</span>Analytics</button>
         <button class="nav-link" data-page="detail"><span>□</span>Film Detail</button>
       </div>
 
-      <div class="avatar">ÁB</div>
+      <button class="avatar" data-page="analytics" class="nav-link">ÁB</button>
     </nav>
     `;
 }

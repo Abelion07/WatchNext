@@ -7,21 +7,21 @@
 }
 
 :root {
-  --bg0: #070711;
-  --bg1: #0d0d1b;
-  --bg2: #141427;
-  --bg3: #1b1b33;
-  --bg4: #242442;
-  --purple: #7c3aed;
-  --purple-light: #a855f7;
+  --bg0: #110707;
+  --bg1: #1b0d0d;
+  --bg2: #271414;
+  --bg3: #331b1b;
+  --bg4: #422424;
+  --purple: #e11d48;
+  --purple-light: #fb7185;
   --red: #e11d48;
   --red-light: #fb7185;
-  --blue: #0ea5e9;
-  --blue-light: #38bdf8;
+  --blue: #f43f5e;
+  --blue-light: #fecdd3;
   --gold: #fbbf24;
   --green: #10b981;
   --text1: #f4f4ff;
-  --text2: #aaaaca;
+  --text2: #71717A;
   --text3: #696990;
   --border: rgba(255, 255, 255, 0.08);
   --border-hover: rgba(255, 255, 255, 0.18);
@@ -35,12 +35,12 @@ body {
   background:
     radial-gradient(
       circle at 20% -10%,
-      rgba(124, 58, 237, 0.25),
+      rgba(225, 29, 72, 0.28),
       transparent 35%
     ),
     radial-gradient(
       circle at 90% 10%,
-      rgba(225, 29, 72, 0.16),
+      rgba(251, 113, 133, 0.18),
       transparent 30%
     ),
     var(--bg0);
@@ -132,8 +132,8 @@ button {
   background: var(--card);
 }
 .nav-link.active {
-  color: var(--purple-light);
-  background: rgba(124, 58, 237, 0.15);
+  color: var(--red-light);
+  background: rgba(225, 29, 72, 0.15);
 }
 
 .nav-search {
@@ -190,10 +190,10 @@ button {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--purple), #5b21b6);
+  background: linear-gradient(135deg, var(--red), #b91c1c);
   color: white;
   padding: 13px 22px;
-  box-shadow: 0 14px 35px rgba(124, 58, 237, 0.28);
+  box-shadow: 0 14px 35px rgba(225, 29, 72, 0.28);
 }
 
 .btn-primary:hover {
@@ -227,7 +227,7 @@ button {
   border: 1px solid var(--border);
 }
 .btn-watch-state {
-  border-color: rgba(168, 85, 247, 0.72) !important;
+  border-color: rgba(247, 85, 85, 0.72) !important;
   color: var(--purple-light) !important;
 }
 .btn-watch-state:hover {
@@ -257,7 +257,7 @@ button {
   background:
     radial-gradient(
       ellipse 70% 45% at 50% 0%,
-      rgba(124, 58, 237, 0.26),
+      rgba(237, 58, 97, 0.26),
       transparent 72%
     ),
     linear-gradient(to bottom, transparent, rgba(7, 7, 17, 0.4));
@@ -267,9 +267,9 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: var(--purple-light);
-  border: 1px solid rgba(168, 85, 247, 0.35);
-  background: rgba(124, 58, 237, 0.12);
+  color: var(--red-light);
+  border: 1px solid rgba(251, 113, 133, 0.35);
+  background: rgba(225, 29, 72, 0.12);
   padding: 7px 14px;
   border-radius: 999px;
   font-size: 12px;
@@ -287,7 +287,7 @@ button {
 }
 
 .hero h1 span {
-  background: linear-gradient(135deg, var(--purple-light), var(--blue-light));
+  background: linear-gradient(135deg, var(--red-light), #fecdd3);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -336,7 +336,7 @@ button {
 
 .poster:hover {
   transform: translateY(-8px) scale(1.02);
-  border-color: rgba(168, 85, 247, 0.35);
+  border-color: rgba(251, 113, 133, 0.35);
 }
 .poster-art {
   height: 182px;
@@ -421,7 +421,7 @@ button {
   font-weight: 800;
 }
 .section-link {
-  color: var(--purple-light);
+  color: var(--red-light);
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
@@ -468,7 +468,7 @@ button {
   background:
     radial-gradient(
       circle at 25% 45%,
-      rgba(124, 58, 237, 0.54),
+      rgba(237, 58, 58, 0.54),
       transparent 34%
     ),
     radial-gradient(
@@ -533,7 +533,7 @@ button {
 .continue-card:hover,
 .rec-card:hover {
   transform: translateY(-4px);
-  border-color: rgba(168, 85, 247, 0.35);
+  border-color: rgba(247, 85, 85, 0.35);
 }
 .thumb {
   height: 230px;
@@ -737,7 +737,7 @@ button {
 }
 
 .movie-search-input:focus {
-  border-color: rgba(168, 85, 247, 0.45);
+  border-color: rgba(247, 85, 85, 0.45);
 }
 
 .movie-search-results {
@@ -880,9 +880,9 @@ button {
   line-height: 1.75;
 }
 .msg.user .bubble {
-  background: rgba(124, 58, 237, 0.18);
+  background: rgba(237, 58, 58, 0.18);
   color: var(--text1);
-  border-color: rgba(168, 85, 247, 0.25);
+  border-color: rgba(247, 85, 85, 0.25);
 }
 
 .result-pills {
@@ -935,7 +935,7 @@ button {
 }
 .suggestion:hover {
   color: var(--purple-light);
-  border-color: rgba(168, 85, 247, 0.35);
+  border-color: rgba(247, 85, 85, 0.35);
 }
 .input-row {
   display: flex;
@@ -951,7 +951,7 @@ button {
   outline: none;
 }
 .ai-input:focus {
-  border-color: rgba(168, 85, 247, 0.45);
+  border-color: rgba(247, 85, 85, 0.45);
 }
 
 .ai-side {
@@ -1009,7 +1009,7 @@ button {
 .filter.on {
   color: var(--purple-light);
   background: rgba(124, 58, 237, 0.14);
-  border-color: rgba(168, 85, 247, 0.38);
+  border-color: rgba(247, 85, 85, 0.38);
 }
 
 .wheel-wrap {
@@ -1036,13 +1036,13 @@ button {
   height: 86px;
   border-radius: 999px;
   border: 0;
-  background: linear-gradient(135deg, var(--purple), var(--red));
-  color: white;
+  background: orange;
+  color: rgb(255, 255, 255);
   font-weight: 800;
   box-shadow:
     0 0 0 7px var(--bg0),
     0 0 0 8px rgba(255, 255, 255, 0.14),
-    0 18px 50px rgba(124, 58, 237, 0.45);
+    0 18px 50px rgba(110, 38, 38, 0.45);
 }
 
 .picked-card {
@@ -1084,10 +1084,10 @@ button {
   align-items: center;
   background: linear-gradient(
     135deg,
-    rgba(124, 58, 237, 0.16),
+    rgba(237, 58, 88, 0.16),
     rgba(14, 165, 233, 0.08)
   );
-  border: 1px solid rgba(168, 85, 247, 0.24);
+  border: 1px solid rgba(247, 85, 85, 0.24);
   border-radius: 24px;
   padding: 22px;
   margin-bottom: 16px;
@@ -1116,7 +1116,7 @@ button {
 }
 .tag.purple {
   color: var(--purple-light);
-  background: rgba(124, 58, 237, 0.18);
+  background: rgba(237, 58, 58, 0.18);
 }
 .tag.blue {
   color: var(--blue-light);
@@ -1215,10 +1215,10 @@ button {
   background:
     radial-gradient(
       circle at 70% 20%,
-      rgba(124, 58, 237, 0.42),
+      rgba(237, 58, 58, 0.42),
       transparent 34%
     ),
-    linear-gradient(135deg, #050512, #1b0732 55%, #12040a);
+    linear-gradient(135deg, #120510, #320707 55%, #12040a);
   border-bottom: 1px solid var(--border);
   background-position: center;
   background-size: cover;
@@ -1232,7 +1232,7 @@ button {
   width: 132px;
   height: 190px;
   border-radius: 20px;
-  background: linear-gradient(135deg, #0c1028, #3b0f5c);
+  background: linear-gradient(135deg, #280c1f, #5c0f0f);
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;
@@ -1334,7 +1334,7 @@ button {
 .status-select {
   background: var(--bg3);
   color: var(--purple-light);
-  border: 1px solid rgba(168, 85, 247, 0.36);
+  border: 1px solid rgba(247, 85, 85, 0.36);
   border-radius: 13px;
   padding: 9px 12px;
   font-weight: 800;
@@ -1409,8 +1409,8 @@ button {
 }
 .watch-rating-grid button:hover,
 .watch-rating-grid button.selected {
-  border-color: rgba(168, 85, 247, 0.58);
-  background: rgba(124, 58, 237, 0.24);
+  border-color: rgba(247, 85, 85, 0.58);
+  background: rgba(237, 58, 58, 0.24);
   color: white;
 }
 .watch-notes-field {
@@ -1468,7 +1468,7 @@ textarea {
   outline: none;
 }
 textarea:focus {
-  border-color: rgba(168, 85, 247, 0.45);
+  border-color: rgba(247, 85, 85, 0.45);
 }
 
 .movie-rating {
@@ -1879,45 +1879,9 @@ body {
   color: #8d8d8d;
 }
 
-.available-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 12px;
-  color: #cfcfcf;
-  font-size: 12px;
-}
-
-.available-row strong {
-  display: inline-flex;
-  height: 21px;
-  align-items: center;
-  padding: 0 8px;
-  border-radius: 999px;
-  background: #fff;
-  color: #111;
-  font-size: 9px;
-  font-weight: 900;
-}
-
-.available-row strong:first-of-type {
-  color: #e50914;
-}
-
 .movie-detail-screen .detail-body {
   display: block;
   padding: 0 18px calc(30px + env(safe-area-inset-bottom));
-}
-
-.detail-trailer-button {
-  width: 100%;
-  min-height: 42px;
-  border: 0;
-  border-radius: 8px;
-  background: linear-gradient(180deg, #ff3e50, #e50914);
-  color: #fff;
-  font-weight: 900;
-  box-shadow: 0 12px 28px rgba(229, 9, 20, 0.28);
 }
 
 .movie-detail-screen .detail-actions {
@@ -1947,6 +1911,35 @@ body {
   background: #222 !important;
   color: #fff !important;
   border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+.movie-detail-screen .remove-menu {
+  position: relative;
+}
+
+.movie-detail-screen .remove-popup {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: min(240px, 100vw);
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  background: rgba(18, 18, 18, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+  z-index: 20;
+}
+
+.movie-detail-screen .remove-popup button {
+  width: 100%;
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.movie-detail-screen .remove-popup button:hover {
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .movie-detail-screen .detail-action-message {
@@ -2130,7 +2123,7 @@ body {
 
 .profile-actions {
   position: absolute;
-  top: 44px;
+  top: 13px;
   right: 0;
   display: flex;
   gap: 8px;
@@ -2414,7 +2407,7 @@ body {
   }
 
   .detail-trailer-button {
-    max-width: 320px;
+    max-width: 353px;
   }
 
   .movie-detail-screen .detail-actions {

@@ -13,8 +13,7 @@ import { Landing } from "./src/pages/landing.js";
 import { Dashboard, loadDashboardMovies } from "./src/pages/dashboard.js";
 import { ContinueWatching, loadContinueWatching } from "./src/pages/ContinueWatching.js";
 import { AiRecs } from "./src/pages/AiRecs.js";
-import { Roulette } from "./src/pages/roulette.js";
-import { Analytics } from "./src/pages/analytics.js";
+import { Analytics, loadAnalyticsMovies } from "./src/pages/analytics.js";
 import { FilmDetail, initFilmDetailActions } from "./src/pages/FilmDetail.js";
 
 
@@ -22,14 +21,14 @@ const app = document.querySelector(".app");
 
 app.innerHTML = `
   ${Navbar()}
-  ${Main(Landing(), Dashboard(), ContinueWatching(), AiRecs(), Roulette(), Analytics(), FilmDetail())}
+  ${Main(Landing(), Dashboard(), ContinueWatching(), AiRecs(), FilmDetail(), Analytics())}
 `;
 
 Navigation();
 AImode();
-initSpinWheel();
 initAddMovieModal();
 initFilmDetailActions();
 
 loadDashboardMovies();
+loadAnalyticsMovies();
 loadContinueWatching()
