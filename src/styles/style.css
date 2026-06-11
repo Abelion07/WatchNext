@@ -1373,6 +1373,58 @@ button {
 .watch-modal-backdrop.open .watch-modal-panel {
   transform: translateX(0);
 }
+
+.details-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  visibility: hidden;
+  background: rgba(3, 3, 10, 0);
+  pointer-events: none;
+  transition:
+    background 0.24s ease,
+    visibility 0.24s ease;
+}
+.details-modal-backdrop.open {
+  visibility: visible;
+  background: rgba(3, 3, 10, 0.72);
+  pointer-events: auto;
+}
+.details-modal-panel {
+  width: min(540px, 100%);
+  max-height: min(80vh, 660px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 22px;
+  background: rgba(13, 13, 27, 0.98);
+  border: 1px solid var(--border-hover);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  transform: translateY(-16px);
+  opacity: 0;
+  transition: transform 0.24s ease, opacity 0.24s ease;
+}
+.details-modal-backdrop.open .details-modal-panel {
+  transform: translateY(0);
+  opacity: 1;
+}
+.details-modal-content {
+  display: grid;
+  gap: 16px;
+}
+.details-modal-panel .panel {
+  background: rgba(18, 18, 18, 0.98);
+}
+.details-modal-text {
+  color: #c8c8c8;
+  font-size: 12px;
+  margin-top: 4px;
+}
 .watch-modal-head {
   display: flex;
   justify-content: space-between;
@@ -1433,28 +1485,28 @@ button {
 }
 .cast {
   display: flex;
-  gap: 12px;
+  gap: 16px;
   flex-wrap: wrap;
 }
 .cast-card {
-  width: 76px;
+  width: 96px;
   text-align: center;
 }
 .cast-avatar {
-  width: 52px;
-  height: 52px;
-  margin: 0 auto 6px;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 8px;
   border-radius: 999px;
   background: var(--bg3);
   display: grid;
   place-items: center;
   border: 1px solid var(--border);
-  font-size: 22px;
+  font-size: 26px;
 }
 .cast-card div:last-child {
   color: var(--text2);
-  font-size: 11px;
-  line-height: 1.25;
+  font-size: 12px;
+  line-height: 1.35;
 }
 textarea {
   width: 100%;
@@ -1957,6 +2009,22 @@ body {
   -webkit-box-orient: vertical;
 }
 
+.detail-see-more {
+  margin-top: 12px;
+  border: 0;
+  background: transparent;
+  color: #9f9cff;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: lowercase;
+  padding: 0;
+}
+
+.detail-see-more:hover {
+  color: #fff;
+  text-decoration: underline;
+}
+
 .detail-director-line {
   margin-top: 10px;
   color: #fff;
@@ -2002,11 +2070,32 @@ body {
 
 .cast-strip {
   display: flex;
-  gap: 12px;
-  margin-top: 14px;
-  padding-bottom: 4px;
+  gap: 16px;
+  margin-top: 18px;
+  padding-bottom: 6px;
   overflow-x: auto;
   scrollbar-width: none;
+}
+
+.detail-review-block {
+  margin-top: 16px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+}
+
+.detail-review-score {
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.detail-review-text {
+  color: #c8c8c8;
+  font-size: 12px;
+  line-height: 1.6;
 }
 
 .cast-strip::-webkit-scrollbar {
@@ -2014,15 +2103,15 @@ body {
 }
 
 .cast-card {
-  flex: 0 0 78px;
-  width: 78px;
+  flex: 0 0 96px;
+  width: 96px;
   text-align: center;
 }
 
 .cast-avatar {
-  width: 58px;
-  height: 58px;
-  margin: 0 auto 7px;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 8px;
   border: 0;
   border-radius: 999px;
   background: #222;
@@ -2035,7 +2124,7 @@ body {
   display: block;
   overflow: hidden;
   color: #fff;
-  font-size: 10px;
+  font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -2043,8 +2132,8 @@ body {
 .cast-card span {
   display: -webkit-box;
   color: #9d9d9d;
-  font-size: 9px;
-  line-height: 1.2;
+  font-size: 11px;
+  line-height: 1.3;
   overflow: hidden;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;

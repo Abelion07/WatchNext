@@ -37,7 +37,7 @@ export function FilmDetail() {
             <div class="detail-actions">
               <button class="btn-small ghost" type="button" data-add-detail-movie>+ My List</button>
               <div class="remove-menu">
-                <button class="btn-small ghost btn-watch-state hidden" type="button" data-remove-detail-movie>Remove</button>
+                <button class="btn-small ghost btn-watch-state hidden" type="button" data-remove-detail-movie>On My List</button>
                 <div class="remove-popup hidden" data-remove-options>
                   <button class="btn-small ghost" type="button" data-remove-option="remove">Remove from list</button>
                   <button class="btn-small ghost" type="button" data-remove-option="watch">Move to watched</button>
@@ -52,6 +52,7 @@ export function FilmDetail() {
             <div class="detail-overview-block">
               <p data-detail-overview>Select Info on a movie card to see its TMDB details here.</p>
             </div>
+            <button class="detail-see-more btn-text" type="button" data-open-details-modal>see more...</button>
             <div class="detail-director-line">Director: <span data-detail-director>Unknown</span></div>
             <div class="detail-tabs" role="tablist">
               <button class="active" type="button">Top Cast & Crew</button>
@@ -63,9 +64,11 @@ export function FilmDetail() {
               <article class="cast-card"><div class="cast-avatar">★</div><strong>Media</strong><span>TMDB detail</span></article>
               <article class="cast-card"><div class="cast-avatar">✦</div><strong>Reviews</strong><span>Your notes</span></article>
             </div>
+            <div class="detail-review-block hidden" data-detail-review>
+              <div class="detail-review-score" data-detail-review-score></div>
+              <p class="detail-review-text" data-detail-review-text></p>
+            </div>
             <div class="detail-secondary-grid">
-              <div class="panel"><h3>Production</h3><div class="detail-list" data-detail-production></div></div>
-              <div class="panel"><h3>Details</h3><div class="detail-list" data-detail-facts></div></div>
               <div class="panel"><h3>Watch history</h3><div class="detail-list" data-watch-history><div class="detail-row"><strong>Watched</strong><span>Not logged yet</span></div></div></div>
               <div class="panel"><h3>Tagline</h3><p data-detail-tagline>No tagline loaded.</p></div>
             </div>
@@ -96,6 +99,22 @@ export function FilmDetail() {
             <button class="btn-small primary" type="button" data-submit-watched>Mentés watched-be</button>
           </div>
         </aside>
+      </div>
+      <div class="details-modal-backdrop" data-details-modal aria-hidden="true">
+        <aside class="details-modal-panel" role="dialog" aria-modal="true" aria-labelledby="details-modal-title">
+          <div class="watch-modal-head">
+            <div>
+              <div class="watch-modal-kicker">Movie details</div>
+              <h2 id="details-modal-title">More information</h2>
+              <p class="details-modal-text">Production and technical details for this title.</p>
+            </div>
+            <button class="modal-close" type="button" data-close-details-modal aria-label="Close">×</button>
+          </div>
+          <div class="details-modal-content">
+            <div class="panel"><h3>Production</h3><div class="detail-list" data-detail-production></div></div>
+            <div class="panel"><h3>Details</h3><div class="detail-list" data-detail-facts></div></div>
+          </div>
+        </aside>
       </div>`;
 }
 
@@ -105,6 +124,8 @@ let currentMovie = null;
 let detailActionsInitialized = false;
 let currentMovieInWatchlist = false;
 let currentMovieWatchCount = 0;
+let currentMovieLatestRating = null;
+let currentMovieLatestNotes = "";
 
 export function initFilmDetailActions() {
   if (detailActionsInitialized) return;
@@ -207,8 +228,11 @@ export function initFilmDetailActions() {
     }
 
     const openButton = event.target.closest("[data-open-watched-modal]");
+    const openDetailsButton = event.target.closest("[data-open-details-modal]");
     const closeButton = event.target.closest("[data-close-watched-modal]");
+    const closeDetailsButton = event.target.closest("[data-close-details-modal]");
     const modal = document.querySelector("[data-watch-modal]");
+    const detailsModal = document.querySelector("[data-details-modal]");
 
     if (openButton) {
       if (!currentMovie) {
@@ -220,8 +244,22 @@ export function initFilmDetailActions() {
       return;
     }
 
+    if (openDetailsButton) {
+      if (!currentMovie) {
+        openDetailsButton.textContent = "Válassz filmet";
+        return;
+      }
+
+      openDetailsModal();
+      return;
+    }
+
     if (closeButton || event.target === modal) {
       closeWatchModal();
+    }
+
+    if (closeDetailsButton || event.target === detailsModal) {
+      closeDetailsModal();
     }
   });
 
@@ -264,8 +302,11 @@ export function initFilmDetailActions() {
         await removeMovieFromWatchlist(currentMovie.id);
       }
       currentMovieWatchCount += 1;
+      currentMovieLatestRating = rating;
+      currentMovieLatestNotes = notesInput?.value.trim() || "";
       setWatchlistActionState(false);
-      setWatchedActionState(currentMovieWatchCount);
+      setWatchedActionState(currentMovieWatchCount, currentMovieLatestRating);
+      setReviewBlock(currentMovieLatestRating, currentMovieLatestNotes);
       refreshWatchedActionState(currentMovie.id);
       closeWatchModal();
       setActionMessage(currentMovieWatchCount > 1 ? "Újranézés naplózva." : "Áthelyezve a watched listába.");
@@ -284,10 +325,27 @@ export function initFilmDetailActions() {
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       closeWatchModal();
+      closeDetailsModal();
     }
   });
 
   detailActionsInitialized = true;
+}
+
+function openDetailsModal() {
+  const modal = document.querySelector("[data-details-modal]");
+  if (!modal) return;
+
+  modal.classList.add("open");
+  modal.setAttribute("aria-hidden", "false");
+}
+
+function closeDetailsModal() {
+  const modal = document.querySelector("[data-details-modal]");
+  if (!modal) return;
+
+  modal.classList.remove("open");
+  modal.setAttribute("aria-hidden", "true");
 }
 
 function formatRuntime(runtime) {
@@ -336,6 +394,7 @@ export function renderMovieDetail(movie) {
   currentMovie = movie;
   currentMovieInWatchlist = false;
   currentMovieWatchCount = 0;
+  currentMovieLatestRating = null;
 
   const notesInput = document.querySelector("[data-watch-notes]");
   const watchedButton = document.querySelector("[data-remove-detail-movie]");
@@ -349,7 +408,7 @@ export function renderMovieDetail(movie) {
   });
   if (watchedButton) {
     watchedButton.disabled = false;
-    watchedButton.textContent = "Remove";
+    watchedButton.textContent = "On My List";
     watchedButton.classList.toggle("hidden", !currentMovieInWatchlist);
   }
   if (removeOptions) {
@@ -359,6 +418,12 @@ export function renderMovieDetail(movie) {
     rateButton.disabled = false;
     rateButton.textContent = "♧ Rate";
   }
+  const reviewBlock = document.querySelector("[data-detail-review]");
+  const reviewScore = document.querySelector("[data-detail-review-score]");
+  const reviewText = document.querySelector("[data-detail-review-text]");
+  if (reviewScore) reviewScore.textContent = "";
+  if (reviewText) reviewText.textContent = "";
+  if (reviewBlock) reviewBlock.classList.add("hidden");
   if (modalMovie) {
     modalMovie.textContent = movie.title || movie.original_title || "Válassz értékelést és jegyzetet.";
   }
@@ -482,7 +547,7 @@ function setWatchlistActionState(inWatchlist, isLoading = false) {
   if (removeButton) {
     removeButton.classList.toggle("hidden", !inWatchlist);
     removeButton.disabled = isLoading;
-    if (!isLoading) removeButton.textContent = "Remove";
+    if (!isLoading) removeButton.textContent = "On My List";
   }
 
   const removeOptions = document.querySelector("[data-remove-options]");
@@ -497,23 +562,29 @@ async function refreshWatchedActionState(tmdbId) {
 
     if (currentMovie && String(currentMovie.id) === String(tmdbId)) {
       currentMovieWatchCount = watchedStatus.watchCount;
-      setWatchedActionState(watchedStatus.watchCount);
+      currentMovieLatestRating = watchedStatus.latestWatch?.user_vote || null;
+      currentMovieLatestNotes = watchedStatus.latestWatch?.watch_notes || "";
+      setWatchedActionState(watchedStatus.watchCount, currentMovieLatestRating);
+      setReviewBlock(currentMovieLatestRating, currentMovieLatestNotes);
       renderWatchHistory(watchedStatus);
     }
   } catch (error) {
     currentMovieWatchCount = 0;
-    setWatchedActionState(0);
+    currentMovieLatestRating = null;
+    currentMovieLatestNotes = "";
+    setWatchedActionState(0, null);
+    setReviewBlock(null, "");
     renderWatchHistory({ watchCount: 0, watches: [] });
   }
 }
 
-function setWatchedActionState(watchCount) {
+function setWatchedActionState(watchCount, latestRating = null) {
   const rateButton = document.querySelector("[data-open-watched-modal]");
   const modalTitle = document.querySelector("#watch-modal-title");
   const submitButton = document.querySelector("[data-submit-watched]");
 
   if (rateButton) {
-    rateButton.textContent = watchCount > 0 ? "♧ Re-rate" : "♧ Rate";
+    rateButton.textContent = watchCount > 0 && latestRating ? `♧ ${latestRating}/10` : "♧ Rate";
     rateButton.classList.toggle("primary", watchCount > 0);
     rateButton.classList.toggle("ghost", watchCount === 0);
   }
@@ -522,6 +593,28 @@ function setWatchedActionState(watchCount) {
   }
   if (submitButton) {
     submitButton.textContent = watchCount > 0 ? "Újranézés mentése" : "Mentés watched-be";
+  }
+}
+
+function setReviewBlock(rating, notes) {
+  const reviewBlock = document.querySelector("[data-detail-review]");
+  const reviewScore = document.querySelector("[data-detail-review-score]");
+  const reviewText = document.querySelector("[data-detail-review-text]");
+
+  if (!reviewBlock || !reviewScore || !reviewText) return;
+
+  if (rating && notes) {
+    reviewScore.textContent = `Your score: ${rating}/10`;
+    reviewText.textContent = notes;
+    reviewBlock.classList.remove("hidden");
+  } else if (rating) {
+    reviewScore.textContent = `Your score: ${rating}/10`;
+    reviewText.textContent = notes || "No review text provided.";
+    reviewBlock.classList.remove("hidden");
+  } else {
+    reviewScore.textContent = "";
+    reviewText.textContent = "";
+    reviewBlock.classList.add("hidden");
   }
 }
 

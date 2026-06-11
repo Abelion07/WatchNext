@@ -184,7 +184,6 @@ async function renderDashboardFromDatabase(posterlink) {
             <div class="movie-rating">${Number(movie.user_vote || 0).toFixed(1)}</div>
           </div>
           <div class="card-meta">${watchCountLabel} · ${watchedDate} · ${formatMovieMeta(movie)}</div>
-          ${movie.watch_notes ? `<div class="watched-note">${escapeHtml(movie.watch_notes)}</div>` : ""}
           <div class="information-button">Info</div>
         </div>
       </article>
