@@ -1,28 +1,12 @@
-import { rec_movies } from "../data/defaultmovies.js";
 import { renderMovieDetail } from "./FilmDetail.js";
 import { searchMovie } from "../services/tmdb.js";
-import { getWatchedMovies, getWatchlistMovies } from "../services/moviesApi.js";
+import {
+  getRecommendedMovies,
+  getWatchedMovies,
+  getWatchlistMovies,
+} from "../services/moviesApi.js";
 
 export function Dashboard() {
-  const aiPicks = rec_movies
-    .map((movie) => {
-      return `
-        <article class="rec-card" data-title="${movie.title}">
-          <div class="rec-art"></div>
-          <div class="card-info">
-            <div class="card-title-row">
-              <div class="card-title">${movie.title}</div>
-              <div class="movie-rating"></div>
-            </div>
-            <div class="card-meta">${movie.meta || "Loading details..."}</div>
-            <div class="ai-badge">✦ 97% match</div>
-            <div class="information-button">Info</div>
-          </div>
-        </article>
-      `;
-    })
-    .join("");
-
   return `<section id="dashboard" class="page active">
         <div class="dash-hero">
           <div>
@@ -53,9 +37,20 @@ export function Dashboard() {
           <article class="stat-card"><div class="stat-value" style="color:#F4F4F5" data-dashboard-stat="rating">0.0</div><div class="stat-label">Average rating</div></article>
         </div>
 
-        <div class="section"><div class="section-head"><div class="section-title">✨ AI picks for tonight</div><div class="section-link" data-page="ai">Ask AI →</div></div></div>
-        <div class="horizontal">
-          ${aiPicks}
+        <div class="section">
+          <div class="section-head">
+            <div class="section-title">✨ AI recs for you</div>
+            <div class="section-actions">
+              <div class="row-scroll-controls" aria-label="Recommendation navigation">
+                <button class="scroll-arrow" type="button" data-scroll-recommendations="left" aria-label="Scroll recommendations left" title="Previous">‹</button>
+                <button class="scroll-arrow" type="button" data-scroll-recommendations="right" aria-label="Scroll recommendations right" title="Next">›</button>
+              </div>
+              <div class="section-link" data-page="ai">Ask AI →</div>
+            </div>
+          </div>
+        </div>
+        <div class="horizontal" data-dashboard-recommendations>
+          <div class="card-meta">Loading recommendations...</div>
         </div>
 
         <div class="section">
@@ -104,36 +99,72 @@ export function loadDashboardMovies() {
     document.addEventListener("movies:changed", () => {
       renderDashboardFromDatabase(posterlink);
     });
+    document.addEventListener("click", (event) => {
+      const scrollButton = event.target.closest("[data-scroll-recommendations]");
+      if (!scrollButton) return;
+
+      const dashboard = document.querySelector("#dashboard");
+      const recommendationsRow = dashboard?.querySelector("[data-dashboard-recommendations]");
+      if (!recommendationsRow) return;
+
+      const direction = scrollButton.dataset.scrollRecommendations === "left" ? -1 : 1;
+      const card = recommendationsRow.querySelector(".rec-card");
+      const scrollStep = card ? card.getBoundingClientRect().width + 14 : 430;
+      recommendationsRow.scrollBy({
+        left: direction * scrollStep * 2,
+        behavior: "smooth",
+      });
+    });
+    document.addEventListener("scroll", (event) => {
+      if (event.target?.matches?.("[data-dashboard-recommendations]")) {
+        updateRecommendationScrollButtons();
+      }
+    }, true);
 
     loadDashboardMovies.infoListenerAttached = true;
   }
 
   renderDashboardFromDatabase(posterlink);
-  loadAiPickPosters(posterlink);
 }
 
 async function renderDashboardFromDatabase(posterlink) {
   const dashboard = document.querySelector("#dashboard");
   const movieRow = dashboard?.querySelector("[data-dashboard-watchlist]");
   const watchedRow = dashboard?.querySelector("[data-dashboard-watched]");
+  const recommendationsRow = dashboard?.querySelector("[data-dashboard-recommendations]");
   const summary = dashboard?.querySelector("[data-dashboard-summary]");
   const watchedSummary = dashboard?.querySelector("[data-dashboard-watched-summary]");
 
-  if (!dashboard || !movieRow || !watchedRow || !summary || !watchedSummary) return;
+  if (
+    !dashboard ||
+    !movieRow ||
+    !watchedRow ||
+    !recommendationsRow ||
+    !summary ||
+    !watchedSummary
+  ) {
+    return;
+  }
 
   try {
-    const [movies, watchedMovies] = await Promise.all([
+    const [movies, watchedMovies, recommendations] = await Promise.all([
       getWatchlistMovies(),
       getWatchedMovies({ force: true }),
+      getRecommendedMovies(10),
     ]);
     const watchlistMovies = movies.filter((movie) => movie.title);
     const visibleWatchedMovies = groupWatchedMovies(watchedMovies.filter((movie) => movie.title));
+    const recommendedMovies = recommendations.movies.filter((movie) => movie.title);
     renderDashboardStats(dashboard, visibleWatchedMovies);
 
-    summary.innerHTML = `You have <span>${movies.length} titles in your watchlist</span> · AI picked ${rec_movies.length} for tonight`;
+    summary.innerHTML = `You have <span>${movies.length} titles in your watchlist</span> · ${recommendedMovies.length} new genre picks`;
     movieRow.innerHTML =
       watchlistMovies.map(renderContinueCard).join("") ||
       `<div class="card-meta">No movies found in your watchlist.</div>`;
+    recommendationsRow.innerHTML =
+      recommendedMovies.map(renderRecommendationCard).join("") ||
+      `<div class="card-meta">No recommendations yet. Add or watch movies with saved genre numbers first.</div>`;
+    requestAnimationFrame(updateRecommendationScrollButtons);
     watchedSummary.textContent = `${visibleWatchedMovies.length} watched titles · ${watchedMovies.length} total watches`;
     watchedRow.innerHTML =
       visibleWatchedMovies.map(renderWatchedCard).join("") ||
@@ -141,6 +172,8 @@ async function renderDashboardFromDatabase(posterlink) {
   } catch (error) {
     summary.textContent = "Could not load movies from database.";
     movieRow.innerHTML = `<div class="card-meta">${error.message}</div>`;
+    recommendationsRow.innerHTML = `<div class="card-meta">${error.message}</div>`;
+    updateRecommendationScrollButtons();
     watchedSummary.textContent = "Could not load watched movies.";
     watchedRow.innerHTML = `<div class="card-meta">${error.message}</div>`;
     renderDashboardStats(dashboard, []);
@@ -190,6 +223,23 @@ async function renderDashboardFromDatabase(posterlink) {
     `;
   }
 
+  function renderRecommendationCard(movie) {
+    return `
+      <article class="rec-card" data-title="${escapeHtml(movie.title)}">
+        <div class="rec-art" style="background-image:url(${posterlink + movie.poster_path})"></div>
+        <div class="card-info">
+          <div class="card-title-row">
+            <div class="card-title">${escapeHtml(movie.title)}</div>
+            <div class="movie-rating">⭐ ${Number(movie.vote_average || 0).toFixed(1)}</div>
+          </div>
+          <div class="card-meta">${formatMovieMeta(movie)}</div>
+          <div class="ai-badge">Genre #${escapeHtml(movie.genre_id || "")}</div>
+          <div class="information-button">Info</div>
+        </div>
+      </article>
+    `;
+  }
+
 }
 
 function renderDashboardStats(dashboard, watchedMovies) {
@@ -210,6 +260,24 @@ function renderDashboardStats(dashboard, watchedMovies) {
 function setStatText(dashboard, statName, value) {
   const stat = dashboard.querySelector(`[data-dashboard-stat="${statName}"]`);
   if (stat) stat.textContent = value;
+}
+
+function updateRecommendationScrollButtons() {
+  const dashboard = document.querySelector("#dashboard");
+  const recommendationsRow = dashboard?.querySelector("[data-dashboard-recommendations]");
+  const leftButton = dashboard?.querySelector('[data-scroll-recommendations="left"]');
+  const rightButton = dashboard?.querySelector('[data-scroll-recommendations="right"]');
+
+  if (!recommendationsRow || !leftButton || !rightButton) return;
+
+  const maxScrollLeft = Math.max(
+    0,
+    recommendationsRow.scrollWidth - recommendationsRow.clientWidth,
+  );
+  const hasOverflow = maxScrollLeft > 2;
+
+  leftButton.disabled = !hasOverflow || recommendationsRow.scrollLeft <= 2;
+  rightButton.disabled = !hasOverflow || recommendationsRow.scrollLeft >= maxScrollLeft - 2;
 }
 
 function formatWatchTime(totalMinutes) {
@@ -251,42 +319,18 @@ function groupWatchedMovies(movies) {
   return [...groupedMovies.values()];
 }
 
-function loadAiPickPosters(posterlink) {
-  document.querySelectorAll(".rec-card").forEach(async (card) => {
-    const title = card.dataset.title;
-    const movie = await searchMovie(title);
-    if (!movie) return;
-
-    const cardTitle = card.querySelector(".card-title");
-    cardTitle.textContent = movie.title;
-
-    const thumb = card.querySelector(".rec-art");
-    thumb.style.backgroundImage = `url(${posterlink + movie.poster_path})`;
-
-    const meta = card.querySelector(".card-meta");
-    const rating = card.querySelector(".movie-rating");
-    meta.innerHTML = formatTmdbMovieMeta(movie);
-    rating.innerHTML = `⭐ ${movie.vote_average.toFixed(1)}`;
-  });
-}
-
 function formatMovieMeta(movie) {
   const year = movie.release_date?.split("-")[0] || "Unknown";
-  const genre = movie.genres?.split(",")[0] || "Movie";
+  const genre =
+    typeof movie.genres === "string"
+      ? movie.genres.split(",")[0]
+      : movie.genres?.[0]?.name || `Genre #${movie.genre_id || "?"}`;
   const runtime = Number(movie.runtime || 0);
   const hours = Math.floor(runtime / 60);
   const minutes = runtime % 60;
+  const runtimeLabel = runtime ? ` · ${hours} h ${minutes} min` : "";
 
-  return `${year} · ${genre === "Science Fiction" ? "Sci-Fi" : genre} · ${hours} h ${minutes} min`;
-}
-
-function formatTmdbMovieMeta(movie) {
-  const year = movie.release_date?.split("-")[0] || "Unknown";
-  const genre = movie.genres?.[0]?.name || "Movie";
-  const hours = Math.floor(movie.runtime / 60);
-  const minutes = movie.runtime % 60;
-
-  return `${year} · ${genre === "Science Fiction" ? "Sci-Fi" : genre} · ${hours} h ${minutes} min`;
+  return `${year} · ${genre === "Science Fiction" ? "Sci-Fi" : genre}${runtimeLabel}`;
 }
 
 function escapeHtml(value) {
