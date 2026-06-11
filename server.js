@@ -4,7 +4,7 @@ import express from "express";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const TMDB_API_KEY = process.env.TMDB_API_KEY || "c6455f4bc87edf27444b6349f528c1b6";
+const TMDB_API_KEY = process.env.TMDB_API_KEY;
 const db = new Database("movies.db");
 
 app.use(express.json({ limit: "1mb" }));
