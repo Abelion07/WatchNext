@@ -145,6 +145,22 @@ export async function getWatchedMovies({ force = false } = {}) {
   return watchedMoviesRequest;
 }
 
+export async function getRecommendedMovies(limit = 10) {
+  const response = await fetch(
+    getApiUrl(`/api/recommendations?limit=${encodeURIComponent(limit)}`),
+  );
+  const result = await response.json();
+
+  if (!response.ok || !result.ok) {
+    throw new Error(result.error || "Nem sikerült betölteni az ajánlásokat.");
+  }
+
+  return {
+    movies: result.movies || [],
+    matchedGenres: result.matched_genres || [],
+  };
+}
+
 export async function isMovieInWatchlist(tmdbId) {
   const response = await fetch(getApiUrl(`/api/movies/${encodeURIComponent(tmdbId)}`));
   const result = await response.json();

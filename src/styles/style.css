@@ -437,6 +437,38 @@ button {
   justify-content: flex-end;
 }
 
+.row-scroll-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.scroll-arrow {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--text1);
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1;
+  transition: 0.18s ease;
+}
+
+.scroll-arrow:hover:not(:disabled) {
+  background: var(--card-hover);
+  border-color: var(--border-hover);
+  transform: translateY(-1px);
+}
+
+.scroll-arrow:disabled {
+  cursor: default;
+  opacity: 0.35;
+}
+
 .library-header {
   padding-bottom: 0;
 }
@@ -506,6 +538,8 @@ button {
   gap: 14px;
   padding: 0 22px 24px;
   overflow-x: auto;
+  scroll-behavior: smooth;
+  scroll-snap-type: x proximity;
   scrollbar-width: none;
 }
 .horizontal::-webkit-scrollbar {
@@ -527,6 +561,7 @@ button {
   flex: 0 0 200px;
   border-radius: 18px;
   overflow: hidden;
+  scroll-snap-align: start;
   transition: 0.18s ease;
 }
 
@@ -643,6 +678,7 @@ button {
   flex: 0 0 200px;
   border-radius: 18px;
   overflow: hidden;
+  scroll-snap-align: start;
   transition: 0.18s ease;
 }
 
