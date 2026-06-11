@@ -39,11 +39,9 @@ export function FilmDetail() {
               <div class="remove-menu">
                 <button class="btn-small ghost btn-watch-state hidden" type="button" data-remove-detail-movie>On My List</button>
                 <div class="remove-popup hidden" data-remove-options>
-                  <button class="btn-small ghost" type="button" data-remove-option="remove">Remove from list</button>
-                  <button class="btn-small ghost" type="button" data-remove-option="watch">Move to watched</button>
-                  <button class="btn-small ghost" type="button" data-remove-option="archive">Archive</button>
-                  <button class="btn-small ghost" type="button" data-remove-option="notes">Keep notes</button>
-                  <button class="btn-small ghost" type="button" data-cancel-remove>Cancel</button>
+                  <button class="btn-small ghost" type="button" data-remove-option="watch" data-option-for="watchlist">Watched</button>
+                  <button class="btn-small ghost" type="button" data-remove-option="remove">Remove</button>
+                  <button class="btn-small ghost" type="button" data-remove-option="add-to-list" data-option-for="watched">Add to my list</button>
                 </div>
               </div>
               <button class="btn-small ghost" type="button" data-open-watched-modal>♧ Rate</button>
@@ -126,6 +124,7 @@ let currentMovieInWatchlist = false;
 let currentMovieWatchCount = 0;
 let currentMovieLatestRating = null;
 let currentMovieLatestNotes = "";
+let currentMovieIsWatched = false;
 
 export function initFilmDetailActions() {
   if (detailActionsInitialized) return;
@@ -169,6 +168,16 @@ export function initFilmDetailActions() {
     const removeOptions = document.querySelector("[data-remove-options]");
     if (removeOptions) {
       removeOptions.classList.remove("hidden");
+      // Hide/show options based on current state
+      const watchlistOption = removeOptions.querySelector("[data-option-for='watchlist']");
+      const watchedOption = removeOptions.querySelector("[data-option-for='watched']");
+      
+      if (watchlistOption) {
+        watchlistOption.classList.toggle("hidden", currentMovieIsWatched);
+      }
+      if (watchedOption) {
+        watchedOption.classList.toggle("hidden", !currentMovieIsWatched);
+      }
     }
   });
 
@@ -202,21 +211,27 @@ export function initFilmDetailActions() {
         }
       } else if (option === "watch") {
         openWatchModal();
+      } else if (option === "add-to-list") {
+        const originalText = removeOption.textContent;
+        try {
+          setActionMessage("");
+          removeOption.disabled = true;
+          removeOption.textContent = "Adding...";
+          await saveMovieToWatchlist(currentMovie);
+          setWatchlistActionState(true);
+          setActionMessage("Hozzáadva a listádhoz.");
+          document.dispatchEvent(new CustomEvent("movies:changed"));
+        } catch (error) {
+          setActionMessage(error.message, true);
+          removeOption.textContent = error.message;
+          setTimeout(() => {
+            removeOption.textContent = originalText;
+          }, 2400);
+        } finally {
+          removeOption.disabled = false;
+        }
       } else {
         setActionMessage("Option selected: " + removeOption.textContent);
-      }
-      return;
-    }
-
-    const cancelRemove = event.target.closest("[data-cancel-remove]");
-    if (cancelRemove) {
-      const removeOptions = document.querySelector("[data-remove-options]");
-      const removeButton = document.querySelector("[data-remove-detail-movie]");
-      if (removeOptions) {
-        removeOptions.classList.add("hidden");
-      }
-      if (removeButton) {
-        removeButton.classList.remove("hidden");
       }
       return;
     }
@@ -547,7 +562,9 @@ function setWatchlistActionState(inWatchlist, isLoading = false) {
   if (removeButton) {
     removeButton.classList.toggle("hidden", !inWatchlist);
     removeButton.disabled = isLoading;
-    if (!isLoading) removeButton.textContent = "On My List";
+    if (!isLoading) {
+      removeButton.textContent = currentMovieIsWatched ? "Watched" : "On My List";
+    }
   }
 
   const removeOptions = document.querySelector("[data-remove-options]");
@@ -582,6 +599,9 @@ function setWatchedActionState(watchCount, latestRating = null) {
   const rateButton = document.querySelector("[data-open-watched-modal]");
   const modalTitle = document.querySelector("#watch-modal-title");
   const submitButton = document.querySelector("[data-submit-watched]");
+  const removeButton = document.querySelector("[data-remove-detail-movie]");
+
+  currentMovieIsWatched = watchCount > 0;
 
   if (rateButton) {
     rateButton.textContent = watchCount > 0 && latestRating ? `♧ ${latestRating}/10` : "♧ Rate";
@@ -593,6 +613,9 @@ function setWatchedActionState(watchCount, latestRating = null) {
   }
   if (submitButton) {
     submitButton.textContent = watchCount > 0 ? "Re-Save" : "Save";
+  }
+  if (removeButton && currentMovieInWatchlist) {
+    removeButton.textContent = currentMovieIsWatched ? "Watched" : "On My List";
   }
 }
 

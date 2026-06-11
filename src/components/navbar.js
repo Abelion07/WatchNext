@@ -1,7 +1,7 @@
 export default function Navbar() {
   return `
     <nav class="nav">
-      <div class="logo"><span>Watch</span><span>Next</span></div>
+      <div class="logo" data-page="dashboard"><span>Watch</span><span>Next</span></div>
       <div class="nav-links">
         <button class="nav-link" data-page="landing"><span>⌂</span>Landing</button>
         <button class="nav-link active" data-page="dashboard"><span>◉</span>Dashboard</button>
