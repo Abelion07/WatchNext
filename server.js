@@ -141,6 +141,188 @@ async function enrichMovieRows(rows) {
   return Promise.all(rows.map((row) => enrichMovieRow(row)));
 }
 
+function getPreferenceGenres() {
+  const rows = db
+    .prepare(
+      `
+      SELECT genres
+      FROM movies
+      WHERE genres IS NOT NULL
+        AND status IN ('watched', 'queue')
+      `,
+    )
+    .all();
+  const genreScores = new Map();
+
+  rows.forEach((row) => {
+    const genreId = Number(row.genres);
+    if (!Number.isInteger(genreId)) return;
+
+    genreScores.set(genreId, (genreScores.get(genreId) || 0) + 1);
+  });
+
+  return [...genreScores.entries()]
+    .sort((firstGenre, secondGenre) => secondGenre[1] - firstGenre[1])
+    .map(([genreId, weight]) => ({ genreId, weight }));
+}
+
+function getProportionalGenreTargets(preferenceGenres, limit) {
+  const totalWeight = preferenceGenres.reduce((sum, genre) => sum + genre.weight, 0);
+  if (!totalWeight) return [];
+
+  const targets = preferenceGenres.map((genre) => {
+    const exactShare = (genre.weight / totalWeight) * limit;
+
+    return {
+      genreId: genre.genreId,
+      exactShare,
+      target: Math.floor(exactShare),
+      remainder: exactShare % 1,
+    };
+  });
+
+  let remaining = limit - targets.reduce((sum, genre) => sum + genre.target, 0);
+
+  targets
+    .filter((genre) => genre.target === 0)
+    .sort((firstGenre, secondGenre) => secondGenre.remainder - firstGenre.remainder)
+    .slice(0, remaining)
+    .forEach((genre) => {
+      genre.target += 1;
+      remaining -= 1;
+    });
+
+  targets
+    .sort((firstGenre, secondGenre) => secondGenre.remainder - firstGenre.remainder)
+    .slice(0, remaining)
+    .forEach((genre) => {
+      genre.target += 1;
+    });
+
+  return targets
+    .filter((genre) => genre.target > 0)
+    .sort((firstGenre, secondGenre) => secondGenre.exactShare - firstGenre.exactShare);
+}
+
+function getSavedTmdbIds() {
+  return new Set(
+    db
+      .prepare("SELECT tmdb_id FROM movies")
+      .all()
+      .map((row) => String(row.tmdb_id)),
+  );
+}
+
+function mapDiscoverMovie(movie, matchedGenreId) {
+  return {
+    id: movie.id,
+    tmdb_id: String(movie.id),
+    title: movie.title,
+    backdrop_path: movie.backdrop_path,
+    genre_id: matchedGenreId,
+    genre_ids: movie.genre_ids || [],
+    genres: `Genre #${matchedGenreId}`,
+    original_language: movie.original_language,
+    overview: movie.overview,
+    popularity: movie.popularity,
+    poster_path: movie.poster_path,
+    release_date: movie.release_date,
+    vote_average: movie.vote_average,
+    vote_count: movie.vote_count,
+    user_status: "recommendation",
+  };
+}
+
+async function fetchTmdbDiscoverMovies(genreId, page = 1) {
+  const params = new URLSearchParams({
+    api_key: TMDB_API_KEY,
+    with_genres: String(genreId),
+    "vote_average.gte": "7",
+    "vote_count.gte": "350",
+    sort_by: "vote_average.desc",
+    include_adult: "false",
+    page: String(page),
+  });
+  const response = await fetch(
+    `https://api.themoviedb.org/3/discover/movie?${params.toString()}`,
+  );
+
+  if (!response.ok) {
+    throw new Error(`TMDB discover for genre ${genreId} could not be loaded.`);
+  }
+
+  const result = await response.json();
+  return result.results || [];
+}
+
+async function getTopRatedGenreRecommendations(limit = 10) {
+  if (!TMDB_API_KEY) {
+    throw new Error("Missing TMDB_API_KEY.");
+  }
+
+  const preferenceGenres = getPreferenceGenres();
+  const genreTargets = getProportionalGenreTargets(preferenceGenres, limit);
+  const savedTmdbIds = getSavedTmdbIds();
+  const recommendationsById = new Map();
+
+  for (const { genreId, target } of genreTargets) {
+    let genreRecommendationCount = 0;
+
+    for (let page = 1; page <= 3; page += 1) {
+      const discoveredMovies = await fetchTmdbDiscoverMovies(genreId, page);
+
+      for (const movie of discoveredMovies) {
+        const tmdbId = String(movie.id);
+        if (savedTmdbIds.has(tmdbId) || recommendationsById.has(tmdbId)) continue;
+        if (!movie.title || !movie.poster_path) continue;
+
+        recommendationsById.set(tmdbId, mapDiscoverMovie(movie, genreId));
+        genreRecommendationCount += 1;
+
+        if (genreRecommendationCount >= target) break;
+      }
+
+      if (genreRecommendationCount >= target || !discoveredMovies.length) break;
+    }
+  }
+
+  for (const { genreId } of genreTargets) {
+    if (recommendationsById.size >= limit) break;
+
+    for (let page = 1; page <= 3; page += 1) {
+      const discoveredMovies = await fetchTmdbDiscoverMovies(genreId, page);
+
+      for (const movie of discoveredMovies) {
+        const tmdbId = String(movie.id);
+        if (savedTmdbIds.has(tmdbId) || recommendationsById.has(tmdbId)) continue;
+        if (!movie.title || !movie.poster_path) continue;
+
+        recommendationsById.set(tmdbId, mapDiscoverMovie(movie, genreId));
+        if (recommendationsById.size >= limit) break;
+      }
+
+      if (recommendationsById.size >= limit || !discoveredMovies.length) break;
+    }
+  }
+
+  const movies = [...recommendationsById.values()]
+    .sort((firstMovie, secondMovie) => {
+      const ratingDiff =
+        Number(secondMovie.vote_average || 0) - Number(firstMovie.vote_average || 0);
+
+      if (ratingDiff !== 0) return ratingDiff;
+
+      return Number(secondMovie.vote_count || 0) - Number(firstMovie.vote_count || 0);
+    })
+    .slice(0, limit);
+
+  return {
+    movies,
+    matched_genres: genreTargets.map((genre) => genre.genreId),
+    genre_targets: genreTargets,
+  };
+}
+
 function getMovieRow(tmdbId) {
   return db.prepare("SELECT * FROM movies WHERE tmdb_id = ?").get(String(tmdbId));
 }
@@ -249,6 +431,26 @@ app.get("/api/watched", async (req, res) => {
     return res.json({
       ok: true,
       movies,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      error: error.message,
+    });
+  }
+});
+
+app.get("/api/recommendations", async (req, res) => {
+  try {
+    const requestedLimit = Number(req.query.limit || 10);
+    const limit = Number.isFinite(requestedLimit)
+      ? Math.min(Math.max(requestedLimit, 5), 10)
+      : 10;
+    const recommendations = await getTopRatedGenreRecommendations(limit);
+
+    return res.json({
+      ok: true,
+      ...recommendations,
     });
   } catch (error) {
     return res.status(500).json({
