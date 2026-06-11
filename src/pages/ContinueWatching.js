@@ -8,7 +8,7 @@ export function ContinueWatching() {
             <div class="library-subtitle" data-continue-summary>Loading titles...</div>
           </div>
           <div class="section-actions">
-            <button class="btn-small primary" type="button" data-open-add-movie>+ Film hozzáadása</button>
+            <button class="btn-small primary" type="button" data-open-add-movie>+ Add movie</button>
             <div class="section-link" data-page="dashboard">Back to dashboard</div>
           </div>
         </div>

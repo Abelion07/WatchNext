@@ -14,12 +14,12 @@ export function Analytics() {
             </div>
           </div>
           <div class="profile-head">
-            <div class="profile-avatar">ÁB</div>
+            <div class="profile-avatar">AC</div>
             <div class="profile-actions">
               <button class="btn-small primary" type="button">Follow</button>
               <button class="btn-small ghost" type="button">Message</button>
             </div>
-            <h2>Ábel Csukás</h2>
+            <h2>Abel Csukas</h2>
             <p>@watchnext</p>
             <div class="profile-stats">
               <strong><span data-analytics-films-count>0</span> <span>Films</span></strong>

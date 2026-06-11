@@ -26,7 +26,7 @@ export function Dashboard() {
   return `<section id="dashboard" class="page active">
         <div class="dash-hero">
           <div>
-            <div class="dash-kicker">Good evening, Ábel 👋</div>
+            <div class="dash-kicker">Good evening, Abel 👋</div>
             <div class="dash-title">What are we watching tonight?</div>
             <div class="dash-sub" data-dashboard-summary>Loading your watchlist...</div>
           </div>

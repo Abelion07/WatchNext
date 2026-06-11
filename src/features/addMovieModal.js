@@ -39,11 +39,11 @@ export function initAddMovieModal() {
     const query = input.value.trim();
 
     if (query.length < 2) {
-      results.innerHTML = `<div class="movie-search-empty">Írj be legalább 2 karaktert.</div>`;
+      results.innerHTML = `<div class="movie-search-empty">Type at least 2 characters.</div>`;
       return;
     }
 
-    results.innerHTML = `<div class="movie-search-empty">Keresés...</div>`;
+    results.innerHTML = `<div class="movie-search-empty">Searching...</div>`;
     searchTimeout = setTimeout(() => renderSearchResults(query, results), 300);
   });
 
@@ -56,7 +56,7 @@ export function initAddMovieModal() {
 
     try {
       detailButton.disabled = true;
-      detailButton.textContent = "Betöltés...";
+      detailButton.textContent = "Loading...";
 
       const movieDetails = await getMovieDetails(movieId);
       renderMovieDetail(movieDetails);
@@ -76,20 +76,20 @@ function renderModal() {
       <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="add-movie-title">
         <div class="modal-head">
           <div>
-            <h2 id="add-movie-title">Film hozzáadása</h2>
-            <p>Keress TMDB alapján, majd nézd meg a részletes adatlapot.</p>
+            <h2 id="add-movie-title">Add movie</h2>
+            <p>Search by TMDB, then view the detailed info page.</p>
           </div>
-          <button class="modal-close" type="button" data-close-add-movie aria-label="Bezárás">×</button>
+          <button class="modal-close" type="button" data-close-add-movie aria-label="Close">×</button>
         </div>
         <input
           class="movie-search-input"
           type="search"
-          placeholder="Film címe..."
+          placeholder="Movie title..."
           autocomplete="off"
           data-movie-search-input
         />
         <div class="movie-search-results" data-movie-search-results>
-          <div class="movie-search-empty">Kezdj el gépelni a kereséshez.</div>
+          <div class="movie-search-empty">Start typing to search.</div>
         </div>
       </div>
     </div>
@@ -100,7 +100,7 @@ function openModal(modal, input, results) {
   modal.classList.add("open");
   modal.setAttribute("aria-hidden", "false");
   input.value = "";
-  results.innerHTML = `<div class="movie-search-empty">Kezdj el gépelni a kereséshez.</div>`;
+  results.innerHTML = `<div class="movie-search-empty">Start typing to search.</div>`;
   setTimeout(() => input.focus(), 0);
 }
 
@@ -116,25 +116,25 @@ async function renderSearchResults(query, results) {
 
     results.innerHTML = visibleMovies.length
       ? visibleMovies.map(renderSearchResult).join("")
-      : `<div class="movie-search-empty">Nincs találat.</div>`;
+      : `<div class="movie-search-empty">No results.</div>`;
   } catch (error) {
     results.innerHTML = `<div class="movie-search-empty">${escapeHtml(error.message)}</div>`;
   }
 }
 
 function renderSearchResult(movie) {
-  const year = movie.release_date?.split("-")[0] || "Ismeretlen";
+  const year = movie.release_date?.split("-")[0] || "Unknown";
   const posterUrl = movie.poster_path ? `${posterBaseUrl}${movie.poster_path}` : "";
 
   return `
     <article class="movie-search-result">
       <div class="movie-search-poster" style="${posterUrl ? `background-image:url(${posterUrl})` : ""}">${posterUrl ? "" : "🎬"}</div>
       <div class="movie-search-info">
-        <div class="movie-search-title">${escapeHtml(movie.title || movie.original_title || "Cím nélkül")}</div>
+        <div class="movie-search-title">${escapeHtml(movie.title || movie.original_title || "No title")}</div>
         <div class="movie-search-meta">${escapeHtml(year)} · ⭐ ${Number(movie.vote_average || 0).toFixed(1)}</div>
-        <div class="movie-search-overview">${escapeHtml(movie.overview || "Nincs leírás.")}</div>
+        <div class="movie-search-overview">${escapeHtml(movie.overview || "No description.")}</div>
       </div>
-      <button class="btn-small primary" type="button" data-view-movie-id="${movie.id}">Részletek</button>
+      <button class="btn-small primary" type="button" data-view-movie-id="${movie.id}">Details</button>
     </article>
   `;
 }

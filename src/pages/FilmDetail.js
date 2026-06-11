@@ -79,11 +79,11 @@ export function FilmDetail() {
         <aside class="watch-modal-panel" role="dialog" aria-modal="true" aria-labelledby="watch-modal-title">
           <div class="watch-modal-head">
             <div>
-              <div class="watch-modal-kicker">Naplózás</div>
-              <h2 id="watch-modal-title">Megnézett film</h2>
-              <p data-watch-modal-movie>Válassz értékelést és írj egy rövid jegyzetet.</p>
+              <div class="watch-modal-kicker">Logging</div>
+              <h2 id="watch-modal-title">Watched movie</h2>
+              <p data-watch-modal-movie>Choose a rating and write a short note.</p>
             </div>
-            <button class="modal-close" type="button" data-close-watched-modal aria-label="Bezárás">×</button>
+            <button class="modal-close" type="button" data-close-watched-modal aria-label="Close">×</button>
           </div>
           <div class="watch-rating-grid" data-watch-rating>
             ${[10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
@@ -92,11 +92,11 @@ export function FilmDetail() {
           </div>
           <label class="watch-notes-field">
             <span>Your notes</span>
-            <textarea data-watch-notes placeholder="Mi maradt meg belőle? Hangulat, kedvenc jelenet, kinek ajánlanád..."></textarea>
+            <textarea data-watch-notes placeholder="What remained from it? Mood, favorite scene, who would you recommend..."></textarea>
           </label>
           <div class="watch-modal-actions">
-            <button class="btn-small ghost" type="button" data-close-watched-modal>Mégse</button>
-            <button class="btn-small primary" type="button" data-submit-watched>Mentés watched-be</button>
+            <button class="btn-small ghost" type="button" data-close-watched-modal>Cancel</button>
+            <button class="btn-small primary" type="button" data-submit-watched>Save to watched</button>
           </div>
         </aside>
       </div>
@@ -135,7 +135,7 @@ export function initFilmDetailActions() {
     if (!addButton) return;
 
     if (!currentMovie) {
-      addButton.textContent = "Válassz filmet";
+      addButton.textContent = "Choose a movie";
       return;
     }
 
@@ -146,7 +146,7 @@ export function initFilmDetailActions() {
     try {
       setActionMessage("");
       addButton.disabled = true;
-      addButton.textContent = "Mentés...";
+      addButton.textContent = "Saving...";
       await saveMovieToWatchlist(currentMovie);
       setWatchlistActionState(true);
       setActionMessage("Hozzáadva a listádhoz.");
@@ -589,10 +589,10 @@ function setWatchedActionState(watchCount, latestRating = null) {
     rateButton.classList.toggle("ghost", watchCount === 0);
   }
   if (modalTitle) {
-    modalTitle.textContent = watchCount > 0 ? "Újranézés" : "Megnézett film";
+    modalTitle.textContent = watchCount > 0 ? "Watch again" : "Watched title";
   }
   if (submitButton) {
-    submitButton.textContent = watchCount > 0 ? "Újranézés mentése" : "Mentés watched-be";
+    submitButton.textContent = watchCount > 0 ? "Re-Save" : "Save";
   }
 }
 

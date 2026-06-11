@@ -1,14 +1,13 @@
 export function AiRecs() {
   return `
     <section id="ai" class="page">
-        <div class="ai-layout">
           <div class="ai-main">
             <header class="ai-header">
               <h2>AI Recommendations</h2>
               <p>Tell WatchNext your mood, available time or exact craving.</p>
             </header>
             <div class="conversation" id="conversation">
-              <div class="msg"><div class="msg-avatar ai">✦</div><div class="bubble">Hey Ábel! Based on your history — sci-fi, psychological thrillers and atmospheric dramas — I can help pick something for tonight. What are you feeling?</div></div>
+              <div class="msg"><div class="msg-avatar ai">✦</div><div class="bubble">Hey Abel! Based on your history — sci-fi, psychological thrillers and atmospheric dramas — I can help pick something for tonight. What are you feeling?</div></div>
               <div class="msg user"><div class="msg-avatar user">ÁB</div><div class="bubble">Give me a dark sci-fi with great visuals. Under 2 hours.</div></div>
               <div class="msg"><div class="msg-avatar ai">✦</div><div class="bubble">Perfect. Here are 4 picks that match: dark, cinematic, smart and under 2 hours.
                 <div class="result-pills">
@@ -33,12 +32,6 @@ export function AiRecs() {
               </div>
             </div>
           </div>
-          <aside class="ai-side">
-            <div class="ai-card"><h3>Tonight Mode</h3><p>Fast decision flow: choose mood, runtime and energy level. WatchNext gives one confident pick.</p></div>
-            <div class="ai-card"><h3>AI understands</h3><ul><li>mood</li><li>runtime</li><li>genre</li><li>similar titles</li><li>attention level</li></ul></div>
-            <div class="ai-card"><h3>Recommendation logic</h3><p>AI explains the pick, but the ranking can still come from your own scoring engine.</p></div>
-          </aside>
-        </div>
       </section>
     `;
 }
