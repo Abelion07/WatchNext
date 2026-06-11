@@ -255,11 +255,13 @@ async function fetchTmdbDiscoverMovies(genreId, page = 1) {
   return result.results || [];
 }
 
-async function getTopRatedGenreRecommendations(limit = 10) {
+async function getTopRatedGenreRecommendations(limit = 10, offset = 0) {
   if (!TMDB_API_KEY) {
     throw new Error("Missing TMDB_API_KEY.");
   }
 
+  const startPage = 1 + offset * 3;
+  const endPage = startPage + 2;
   const preferenceGenres = getPreferenceGenres();
   const genreTargets = getProportionalGenreTargets(preferenceGenres, limit);
   const savedTmdbIds = getSavedTmdbIds();
@@ -268,7 +270,7 @@ async function getTopRatedGenreRecommendations(limit = 10) {
   for (const { genreId, target } of genreTargets) {
     let genreRecommendationCount = 0;
 
-    for (let page = 1; page <= 3; page += 1) {
+    for (let page = startPage; page <= endPage; page += 1) {
       const discoveredMovies = await fetchTmdbDiscoverMovies(genreId, page);
 
       for (const movie of discoveredMovies) {
@@ -289,7 +291,7 @@ async function getTopRatedGenreRecommendations(limit = 10) {
   for (const { genreId } of genreTargets) {
     if (recommendationsById.size >= limit) break;
 
-    for (let page = 1; page <= 3; page += 1) {
+    for (let page = startPage; page <= endPage; page += 1) {
       const discoveredMovies = await fetchTmdbDiscoverMovies(genreId, page);
 
       for (const movie of discoveredMovies) {
@@ -320,6 +322,7 @@ async function getTopRatedGenreRecommendations(limit = 10) {
     movies,
     matched_genres: genreTargets.map((genre) => genre.genreId),
     genre_targets: genreTargets,
+    offset,
   };
 }
 
@@ -446,7 +449,9 @@ app.get("/api/recommendations", async (req, res) => {
     const limit = Number.isFinite(requestedLimit)
       ? Math.min(Math.max(requestedLimit, 5), 10)
       : 10;
-    const recommendations = await getTopRatedGenreRecommendations(limit);
+    const requestedOffset = Number(req.query.offset || 0);
+    const offset = Number.isFinite(requestedOffset) ? Math.max(0, requestedOffset) : 0;
+    const recommendations = await getTopRatedGenreRecommendations(limit, offset);
 
     return res.json({
       ok: true,
