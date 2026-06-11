@@ -45,6 +45,7 @@ export function Dashboard() {
                 <button class="scroll-arrow" type="button" data-scroll-recommendations="left" aria-label="Scroll recommendations left" title="Previous">‹</button>
                 <button class="scroll-arrow" type="button" data-scroll-recommendations="right" aria-label="Scroll recommendations right" title="Next">›</button>
               </div>
+              <button class="btn-small ghost" type="button" data-regenerate-recommendations>Regenerate</button>
               <div class="section-link" data-page="ai">Ask AI →</div>
             </div>
           </div>
@@ -97,9 +98,16 @@ export function loadDashboardMovies() {
     });
 
     document.addEventListener("movies:changed", () => {
+      setRecommendationOffset(0);
       renderDashboardFromDatabase(posterlink);
     });
     document.addEventListener("click", (event) => {
+      const regenerateButton = event.target.closest("[data-regenerate-recommendations]");
+      if (regenerateButton) {
+        regenerateDashboardRecommendations(posterlink, regenerateButton);
+        return;
+      }
+
       const scrollButton = event.target.closest("[data-scroll-recommendations]");
       if (!scrollButton) return;
 
@@ -150,7 +158,7 @@ async function renderDashboardFromDatabase(posterlink) {
     const [movies, watchedMovies, recommendations] = await Promise.all([
       getWatchlistMovies(),
       getWatchedMovies({ force: true }),
-      getRecommendedMovies(10),
+      getRecommendedMovies(10, getRecommendationOffset()),
     ]);
     const watchlistMovies = movies.filter((movie) => movie.title);
     const visibleWatchedMovies = groupWatchedMovies(watchedMovies.filter((movie) => movie.title));
@@ -162,7 +170,7 @@ async function renderDashboardFromDatabase(posterlink) {
       watchlistMovies.map(renderContinueCard).join("") ||
       `<div class="card-meta">No movies found in your watchlist.</div>`;
     recommendationsRow.innerHTML =
-      recommendedMovies.map(renderRecommendationCard).join("") ||
+      recommendedMovies.map((movie) => renderRecommendationCard(movie, posterlink)).join("") ||
       `<div class="card-meta">No recommendations yet. Add or watch movies with saved genre numbers first.</div>`;
     requestAnimationFrame(updateRecommendationScrollButtons);
     watchedSummary.textContent = `${visibleWatchedMovies.length} watched titles · ${watchedMovies.length} total watches`;
@@ -223,23 +231,68 @@ async function renderDashboardFromDatabase(posterlink) {
     `;
   }
 
-  function renderRecommendationCard(movie) {
-    return `
-      <article class="rec-card" data-title="${escapeHtml(movie.title)}">
-        <div class="rec-art" style="background-image:url(${posterlink + movie.poster_path})"></div>
-        <div class="card-info">
-          <div class="card-title-row">
-            <div class="card-title">${escapeHtml(movie.title)}</div>
-            <div class="movie-rating">⭐ ${Number(movie.vote_average || 0).toFixed(1)}</div>
-          </div>
-          <div class="card-meta">${formatMovieMeta(movie)}</div>
-          <div class="ai-badge">Genre #${escapeHtml(movie.genre_id || "")}</div>
-          <div class="information-button">Info</div>
-        </div>
-      </article>
-    `;
-  }
+}
 
+function renderRecommendationCard(movie, posterlink) {
+  return `
+    <article class="rec-card" data-title="${escapeHtml(movie.title)}">
+      <div class="rec-art" style="background-image:url(${posterlink + movie.poster_path})"></div>
+      <div class="card-info">
+        <div class="card-title-row">
+          <div class="card-title">${escapeHtml(movie.title)}</div>
+          <div class="movie-rating">⭐ ${Number(movie.vote_average || 0).toFixed(1)}</div>
+        </div>
+        <div class="card-meta">${formatMovieMeta(movie)}</div>
+        <div class="ai-badge">Genre #${escapeHtml(movie.genre_id || "")}</div>
+        <div class="information-button">Info</div>
+      </div>
+    </article>
+  `;
+}
+
+async function regenerateDashboardRecommendations(posterlink, button) {
+  const dashboard = document.querySelector("#dashboard");
+  const recommendationsRow = dashboard?.querySelector("[data-dashboard-recommendations]");
+  const summary = dashboard?.querySelector("[data-dashboard-summary]");
+
+  if (!dashboard || !recommendationsRow || button.disabled) return;
+
+  const previousText = button.textContent;
+  const nextOffset = getRecommendationOffset() + 1;
+  button.disabled = true;
+  button.textContent = "Loading...";
+  recommendationsRow.scrollTo({ left: 0, behavior: "smooth" });
+  recommendationsRow.innerHTML = `<div class="card-meta">Generating new recommendations...</div>`;
+  updateRecommendationScrollButtons();
+
+  try {
+    const recommendations = await getRecommendedMovies(10, nextOffset);
+    const recommendedMovies = recommendations.movies.filter((movie) => movie.title);
+    setRecommendationOffset(nextOffset);
+
+    recommendationsRow.innerHTML =
+      recommendedMovies.map((movie) => renderRecommendationCard(movie, posterlink)).join("") ||
+      `<div class="card-meta">No more recommendations found. Try adding more genres to your watched or watchlist movies.</div>`;
+
+    if (summary) {
+      summary.innerHTML = `Generated <span>${recommendedMovies.length} fresh picks</span> · batch ${nextOffset + 1}`;
+    }
+    requestAnimationFrame(updateRecommendationScrollButtons);
+  } catch (error) {
+    recommendationsRow.innerHTML = `<div class="card-meta">${error.message}</div>`;
+    updateRecommendationScrollButtons();
+  } finally {
+    button.disabled = false;
+    button.textContent = previousText;
+  }
+}
+
+function getRecommendationOffset() {
+  return Number(loadDashboardMovies.recommendationOffset || 0);
+}
+
+function setRecommendationOffset(offset) {
+  loadDashboardMovies.recommendationOffset = offset;
 }
 
 function renderDashboardStats(dashboard, watchedMovies) {

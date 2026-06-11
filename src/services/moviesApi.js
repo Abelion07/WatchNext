@@ -145,9 +145,13 @@ export async function getWatchedMovies({ force = false } = {}) {
   return watchedMoviesRequest;
 }
 
-export async function getRecommendedMovies(limit = 10) {
+export async function getRecommendedMovies(limit = 10, offset = 0) {
   const response = await fetch(
-    getApiUrl(`/api/recommendations?limit=${encodeURIComponent(limit)}`),
+    getApiUrl(
+      `/api/recommendations?limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(
+        offset,
+      )}`,
+    ),
   );
   const result = await response.json();
 
@@ -158,6 +162,7 @@ export async function getRecommendedMovies(limit = 10) {
   return {
     movies: result.movies || [],
     matchedGenres: result.matched_genres || [],
+    offset: result.offset || 0,
   };
 }
 
