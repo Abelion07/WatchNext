@@ -1,5 +1,8 @@
 .env
 /movies.db
+/movies.db-journal
+/movies.db-shm
+/movies.db-wal
 kulcsok.txt
 node_modules
 /tmdb.js

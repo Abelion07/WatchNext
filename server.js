@@ -1,14 +1,18 @@
 import "dotenv/config";
 import Database from "better-sqlite3";
 import express from "express";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
+const rootDir = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 3001;
 const TMDB_API_KEY = process.env.TMDB_API_KEY;
-const db = new Database("movies.db");
+const DATABASE_PATH = process.env.DATABASE_PATH || path.join(rootDir, "movies.db");
+const db = new Database(DATABASE_PATH);
 
 app.use(express.json({ limit: "1mb" }));
-app.use(express.static("."));
+app.use(express.static(rootDir));
 
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
@@ -588,7 +592,7 @@ app.delete("/api/movies/:tmdbId", (req, res) => {
 app.get("/api/status", async (req, res) => {
   res.json({
     app: "movie-dashboard-api",
-    database: "movies.db",
+    database: DATABASE_PATH,
     status: "running",
     timestamp: new Date().toISOString(),
   });
