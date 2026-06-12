@@ -123,6 +123,13 @@ export function loadDashboardMovies() {
       if (!recommendationsRow) return;
 
       const direction = scrollButton.dataset.scrollRecommendations === "left" ? -1 : 1;
+      const canScroll = recommendationsRow.scrollWidth > recommendationsRow.clientWidth + 2;
+      if (!canScroll && direction === 1) {
+        const regenerateButton = dashboard.querySelector("[data-regenerate-recommendations]");
+        if (regenerateButton) regenerateDashboardRecommendations(posterlink, regenerateButton);
+        return;
+      }
+
       const card = recommendationsRow.querySelector(".rec-card");
       const scrollStep = card ? card.getBoundingClientRect().width + 14 : 430;
       recommendationsRow.scrollBy({
@@ -335,9 +342,16 @@ function updateRecommendationScrollButtons() {
     recommendationsRow.scrollWidth - recommendationsRow.clientWidth,
   );
   const hasOverflow = maxScrollLeft > 2;
+  const hasRecommendations = Boolean(recommendationsRow.querySelector(".rec-card"));
 
   leftButton.disabled = !hasOverflow || recommendationsRow.scrollLeft <= 2;
-  rightButton.disabled = !hasOverflow || recommendationsRow.scrollLeft >= maxScrollLeft - 2;
+  rightButton.disabled =
+    !hasRecommendations || (hasOverflow && recommendationsRow.scrollLeft >= maxScrollLeft - 2);
+  rightButton.title = hasOverflow ? "Next" : "Generate more";
+  rightButton.setAttribute(
+    "aria-label",
+    hasOverflow ? "Scroll recommendations right" : "Generate more recommendations",
+  );
 }
 
 function formatWatchTime(totalMinutes) {

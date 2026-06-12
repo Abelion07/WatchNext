@@ -242,7 +242,7 @@ async function fetchTmdbDiscoverMovies(genreId, page = 1) {
     api_key: TMDB_API_KEY,
     with_genres: String(genreId),
     "vote_average.gte": "7",
-    "vote_count.gte": "350",
+    "vote_count.gte": "500",
     sort_by: "vote_average.desc",
     include_adult: "false",
     page: String(page),
