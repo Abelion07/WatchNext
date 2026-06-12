@@ -62,7 +62,7 @@ export async function loadContinueWatching() {
   }
 
   function renderContinueCard(movie) {
-    const progressPercent = movie.progress || 35;
+    const progressPercent = movie.progress || 0;
     const posterUrl = movie.poster_path
       ? `${posterlink}${movie.poster_path}`
       : "";
