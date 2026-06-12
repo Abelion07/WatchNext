@@ -3,6 +3,7 @@ import {
   isMovieInWatchlist,
   markMovieAsWatched,
   removeMovieFromWatchlist,
+  removeWatchedMovie,
   saveMovieToWatchlist,
 } from "../services/moviesApi.js";
 
@@ -148,7 +149,7 @@ export function initFilmDetailActions() {
       addButton.textContent = "Saving...";
       await saveMovieToWatchlist(currentMovie);
       setWatchlistActionState(true);
-      setActionMessage("Hozzáadva a listádhoz.");
+      setActionMessage("Added to My List.");
       document.dispatchEvent(new CustomEvent("movies:changed"));
     } catch (error) {
       setActionMessage(error.message, true);
@@ -167,8 +168,7 @@ export function initFilmDetailActions() {
 
     const removeOptions = document.querySelector("[data-remove-options]");
     if (removeOptions) {
-      removeOptions.classList.remove("hidden");
-      // Hide/show options based on current state
+      removeOptions.classList.remove("hidden");      // Hide/show options based on current state
       const watchlistOption = removeOptions.querySelector("[data-option-for='watchlist']");
       const watchedOption = removeOptions.querySelector("[data-option-for='watched']");
       
@@ -192,13 +192,31 @@ export function initFilmDetailActions() {
 
       if (option === "remove") {
         const originalText = removeOption.textContent;
+        const wasWatched = currentMovieIsWatched;
+
         try {
           setActionMessage("");
           removeOption.disabled = true;
           removeOption.textContent = "Removing...";
-          await removeMovieFromWatchlist(currentMovie.id);
+          if (wasWatched) {
+            await removeWatchedMovie(currentMovie.id);
+          } else {
+            await removeMovieFromWatchlist(currentMovie.id);
+          }
+
+          if (wasWatched) {
+            currentMovieWatchCount = 0;
+            currentMovieLatestRating = null;
+            currentMovieLatestNotes = "";
+            currentMovieIsWatched = false;
+            setWatchedActionState(0, null);
+            setReviewBlock(null, "");
+            renderWatchHistory({ watchCount: 0, watches: [] });
+          }
+
           setWatchlistActionState(false);
-          setActionMessage("Removed from My List");
+          setActionMessage(wasWatched ? "Removed from watched list." : "Removed from My List.");
+          removeOption.textContent = originalText;
           document.dispatchEvent(new CustomEvent("movies:changed"));
         } catch (error) {
           setActionMessage(error.message, true);
@@ -219,7 +237,11 @@ export function initFilmDetailActions() {
           removeOption.textContent = "Adding...";
           await saveMovieToWatchlist(currentMovie);
           setWatchlistActionState(true);
-          setActionMessage("Added to My List");
+          currentMovieIsWatched = false;
+          setWatchedActionState(0, null);
+          setReviewBlock(null, "");
+          renderWatchHistory({ watchCount: 0, watches: [] });
+          setActionMessage("Added to My List.");
           document.dispatchEvent(new CustomEvent("movies:changed"));
         } catch (error) {
           setActionMessage(error.message, true);
@@ -313,12 +335,10 @@ export function initFilmDetailActions() {
       watchedButton.disabled = true;
       watchedButton.textContent = "Mentés...";
       await markMovieAsWatched(currentMovie, rating, notesInput?.value.trim() || "");
-      if (currentMovieInWatchlist) {
-        await removeMovieFromWatchlist(currentMovie.id);
-      }
       currentMovieWatchCount += 1;
       currentMovieLatestRating = rating;
       currentMovieLatestNotes = notesInput?.value.trim() || "";
+      currentMovieInWatchlist = false;
       setWatchlistActionState(false);
       setWatchedActionState(currentMovieWatchCount, currentMovieLatestRating);
       setReviewBlock(currentMovieLatestRating, currentMovieLatestNotes);
@@ -410,6 +430,8 @@ export function renderMovieDetail(movie) {
   currentMovieInWatchlist = false;
   currentMovieWatchCount = 0;
   currentMovieLatestRating = null;
+  currentMovieLatestNotes = "";
+  currentMovieIsWatched = false;
 
   const notesInput = document.querySelector("[data-watch-notes]");
   const watchedButton = document.querySelector("[data-remove-detail-movie]");
@@ -423,8 +445,8 @@ export function renderMovieDetail(movie) {
   });
   if (watchedButton) {
     watchedButton.disabled = false;
-    watchedButton.textContent = "On My List";
-    watchedButton.classList.toggle("hidden", !currentMovieInWatchlist);
+    watchedButton.textContent = currentMovieIsWatched ? "Watched" : "On My List";
+    watchedButton.classList.toggle("hidden", !currentMovieInWatchlist && !currentMovieIsWatched);
   }
   if (removeOptions) {
     removeOptions.classList.add("hidden");
@@ -554,13 +576,13 @@ function setWatchlistActionState(inWatchlist, isLoading = false) {
   const removeButton = document.querySelector("[data-remove-detail-movie]");
 
   if (addButton) {
-    addButton.classList.toggle("hidden", inWatchlist && !isLoading);
+    addButton.classList.toggle("hidden", (inWatchlist || currentMovieIsWatched) && !isLoading);
     addButton.disabled = isLoading;
     addButton.textContent = isLoading ? "Checking..." : "+ My List";
   }
 
   if (removeButton) {
-    removeButton.classList.toggle("hidden", !inWatchlist);
+    removeButton.classList.toggle("hidden", !inWatchlist && !currentMovieIsWatched);
     removeButton.disabled = isLoading;
     if (!isLoading) {
       removeButton.textContent = currentMovieIsWatched ? "Watched" : "On My List";
@@ -582,6 +604,7 @@ async function refreshWatchedActionState(tmdbId) {
       currentMovieLatestRating = watchedStatus.latestWatch?.user_vote || null;
       currentMovieLatestNotes = watchedStatus.latestWatch?.watch_notes || "";
       setWatchedActionState(watchedStatus.watchCount, currentMovieLatestRating);
+      setWatchlistActionState(currentMovieInWatchlist);
       setReviewBlock(currentMovieLatestRating, currentMovieLatestNotes);
       renderWatchHistory(watchedStatus);
     }
@@ -614,7 +637,7 @@ function setWatchedActionState(watchCount, latestRating = null) {
   if (submitButton) {
     submitButton.textContent = watchCount > 0 ? "Re-Save" : "Save";
   }
-  if (removeButton && currentMovieInWatchlist) {
+  if (removeButton) {
     removeButton.textContent = currentMovieIsWatched ? "Watched" : "On My List";
   }
 }

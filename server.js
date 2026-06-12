@@ -365,10 +365,14 @@ app.post("/api/movies", async (req, res) => {
   }
 
   const existingMovie = getMovieRow(tmdbId);
-  const nextStatus =
-    existingMovie?.status === "watched"
-      ? "watched"
-      : normalizeStatus(req.body?.user_status);
+  let nextStatus;
+  if (req.body?.user_status) {
+    nextStatus = normalizeStatus(req.body.user_status);
+  } else if (existingMovie) {
+    nextStatus = existingMovie.status;
+  } else {
+    nextStatus = "queue";
+  }
 
   try {
     db.prepare(
@@ -579,7 +583,19 @@ app.post("/api/watched", async (req, res) => {
 
 app.delete("/api/movies/:tmdbId", (req, res) => {
   const result = db
-    .prepare("DELETE FROM movies WHERE tmdb_id = ? AND status = 'queue'")
+    .prepare("DELETE FROM movies WHERE tmdb_id = ?")
+    .run(String(req.params.tmdbId));
+
+  return res.json({
+    ok: true,
+    deleted: result.changes,
+    tmdb_id: String(req.params.tmdbId),
+  });
+});
+
+app.delete("/api/watched/:tmdbId", (req, res) => {
+  const result = db
+    .prepare("DELETE FROM movies WHERE tmdb_id = ? AND status = 'watched'")
     .run(String(req.params.tmdbId));
 
   return res.json({

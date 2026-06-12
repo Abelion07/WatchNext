@@ -111,6 +111,21 @@ export async function removeMovieFromWatchlist(tmdbId) {
     throw new Error(result.error || "Nem sikerült eltávolítani a filmet.");
   }
 
+  watchedMoviesRequest = null;
+  return result;
+}
+
+export async function removeWatchedMovie(tmdbId) {
+  const response = await fetch(getApiUrl(`/api/watched/${encodeURIComponent(tmdbId)}`), {
+    method: "DELETE",
+  });
+  const result = await response.json();
+
+  if (!response.ok || !result.ok) {
+    throw new Error(result.error || "Nem sikerült eltávolítani a megnézett filmet.");
+  }
+
+  watchedMoviesRequest = null;
   return result;
 }
 

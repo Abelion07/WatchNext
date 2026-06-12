@@ -102,6 +102,13 @@ export function loadDashboardMovies() {
       renderDashboardFromDatabase(posterlink);
     });
     document.addEventListener("click", (event) => {
+      const dashboardTrigger = event.target.closest("[data-page='dashboard']");
+      if (dashboardTrigger) {
+        setRecommendationOffset(0);
+        renderDashboardFromDatabase(posterlink);
+        return;
+      }
+
       const regenerateButton = event.target.closest("[data-regenerate-recommendations]");
       if (regenerateButton) {
         regenerateDashboardRecommendations(posterlink, regenerateButton);
@@ -213,8 +220,8 @@ async function renderDashboardFromDatabase(posterlink) {
 
     const watchCountLabel =
       Number(movie.watch_count || 0) > 1
-        ? `${movie.watch_count} megtekintés`
-        : "1 megtekintés";
+        ? `${movie.watch_count}x watched`
+        : "1x watched";
 
     return `
       <article class="continue-card watched-card" data-title="${movie.title}">
